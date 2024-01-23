@@ -16,7 +16,7 @@ default = []
 gpu = ["faiss-next-sys/gpu"]
 
 [dependencies]
-faiss-next-sys = { path = "../faiss-next-sys" }
+faiss-next-sys = { path = "../faiss-next-sys", version = "0.1.1" }
 thiserror = "1.0.56"
 tracing = "0.1.40"
 
