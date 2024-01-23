@@ -3,30 +3,35 @@
 //! `faiss` is a light weight rust wrapper for [facebookresearch/faiss](https://github.com/facebookresearch/faiss) c api. Quick example:
 //!
 //! ```rust
-//! use faiss::{index_factory, FaissMetricType};
+//! use faiss_next::{index_factory, FaissMetricType, Index};
+//! use ndarray::{s, Array2};
+//! use ndarray_rand::*;
 //!
 //! //create index
-//! let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2)?;
+//! let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).expect("failed to create cpu index");
 //!
 //! //create some random feature
-//! let feats = Array2::random((1024 * 1024, 128), rand::distributions::Uniform::new(0., 1.));
+//! let feats = Array2::random((1024, 128), rand::distributions::Uniform::new(0., 1.));
 //!
 //! //get query from position 42
 //! let query = feats.slice(s![42..43, ..]);
 //!
 //! //add features in index
-//! index.add(feats.as_slice_memory_order().unwrap())?;
+//! index.add(feats.as_slice_memory_order().unwrap()).expect("failed to add feature");
 //!
 //! //do the search
-//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
 //! assert_eq!(ret.labels[0], 42i64);
 //!
 //! //move index from cpu to gpu, only available when gpu feature is enabled
-//! let index = index.into_gpu(0)?;
-//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//! #[cfg(feature = "gpu")]
+//! {
+//! let index = index.into_gpu(0).expect("failed to move index to gpu");
+//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
 //! assert_eq!(ret.labels[0], 42i64);
+//! }
 //! ```
-pub(crate) mod sys;
+use faiss_next_sys as sys;
 use std::ffi::CString;
 use std::ptr::{addr_of_mut, null_mut};
 use std::time::Instant;
@@ -388,10 +393,7 @@ fn test_faiss_index_ok() -> Result<()> {
     std::env::set_var("RUST_LOG", "trace");
     let _ = tracing_subscriber::fmt::try_init();
     let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2)?;
-    let feats = Array2::random(
-        (1024 * 1024, 128),
-        rand::distributions::Uniform::new(0., 1.),
-    );
+    let feats = Array2::random((1024, 128), rand::distributions::Uniform::new(0., 1.));
     let query = feats.slice(s![42..43, ..]);
     index.add(feats.as_slice_memory_order().unwrap())?;
     let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;

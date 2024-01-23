@@ -1,0 +1,22 @@
+[package]
+name = "faiss-next-sys"
+version = "0.1.1"
+edition = "2021"
+license = "MIT"
+description = "Light weighted rust wrapper of c api of facebookresearch/faiss library"
+homepage = "http://github.com/yexiangyu/faiss-next"
+documentation = "https://docs.rs/faiss-next"
+repository = "https://github.com/yexiangyu/faiss-next"
+keywords = ["faiss"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+gpu = []
+bindgen = []
+
+[build-dependencies]
+bindgen = "0.69.2"
+
+[dependencies]
