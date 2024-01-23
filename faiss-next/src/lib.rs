@@ -411,7 +411,7 @@ fn benchmark_faiss_cpu() {
     index.add(feats.as_slice_memory_order().unwrap()).unwrap();
     let times = 10;
     let mut ds = vec![];
-    for n in 0..times {
+    for _ in 0..times {
         let tm = Instant::now();
         let ret = index
             .search(query.as_slice_memory_order().unwrap(), 1)
@@ -445,7 +445,7 @@ fn benchmark_faiss_gpu() {
     let index = index.into_gpu(7).expect("failed to move index to gpu");
     let times = 10;
     let mut ds = vec![];
-    for n in 0..times {
+    for _ in 0..times {
         let tm = Instant::now();
         let ret = index
             .search(query.as_slice_memory_order().unwrap(), 1)
@@ -457,4 +457,3 @@ fn benchmark_faiss_gpu() {
     let d: Duration = ds.into_iter().sum();
     info!("duration={:?}, times={}", d / times, times);
 }
-
