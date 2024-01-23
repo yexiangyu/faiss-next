@@ -190,6 +190,14 @@ impl Drop for IDSelector {
 }
 
 /// Index use cpu
+/// # Examples
+/// ``` rust
+/// use faiss_next as faiss;
+/// use faiss::Index;
+/// let mut index = faiss::index_factory(128, "Flat", faiss::FaissMetricType::METRIC_L2).expect("failed to create index");
+/// index.add(&vec![0.0;128 * 128]).expect("failed to add feature");
+/// let ret = index.search(&vec![0.0;128], 1).expect("failed to search");
+/// ```
 #[derive(Debug)]
 pub struct CpuIndex {
     pub inner: *mut sys::FaissIndex,
@@ -386,29 +394,61 @@ pub mod gpu {
 
 #[cfg(test)]
 #[test]
-fn test_faiss_index_ok() -> Result<()> {
+fn benchmark_faiss_gpu() {
+    use std::time::Duration;
+
     use ndarray::{s, Array2};
     use ndarray_rand::*;
-    use tracing::debug;
+    use tracing::*;
     std::env::set_var("RUST_LOG", "trace");
     let _ = tracing_subscriber::fmt::try_init();
-    let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2)?;
-    let feats = Array2::random((1024, 128), rand::distributions::Uniform::new(0., 1.));
+    let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).unwrap();
+    let feats = Array2::random(
+        (1024 * 1024, 128),
+        rand::distributions::Uniform::new(0., 1.),
+    );
     let query = feats.slice(s![42..43, ..]);
-    index.add(feats.as_slice_memory_order().unwrap())?;
-    let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
-    debug!(?ret);
-    let index = index.clone();
-    let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
-    debug!(?ret, "cloned index");
-    #[cfg(feature = "gpu")]
-    {
-        let index = index.into_gpu(1)?;
-        let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
-        debug!(?ret);
-        let index = index.clone();
-        let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
-        debug!(?ret, "cloned index");
+    index.add(feats.as_slice_memory_order().unwrap()).unwrap();
+    let times = 10;
+    let mut ds = vec![];
+    for n in 0..times {
+        let tm = Instant::now();
+        let ret = index
+            .search(query.as_slice_memory_order().unwrap(), 1)
+            .unwrap();
+        let d = tm.elapsed();
+        ds.push(d);
+        debug!(?ret, ?d);
     }
-    Ok(())
+    let d: Duration = ds.into_iter().sum();
+    info!("duration={:?}, times={}", d / times, times);
 }
+
+// #[cfg(test)]
+// #[test]
+// fn test_faiss_index_ok() -> Result<()> {
+//     use ndarray::{s, Array2};
+//     use ndarray_rand::*;
+//     use tracing::debug;
+//     std::env::set_var("RUST_LOG", "trace");
+//     let _ = tracing_subscriber::fmt::try_init();
+//     let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2)?;
+//     let feats = Array2::random((1024, 128), rand::distributions::Uniform::new(0., 1.));
+//     let query = feats.slice(s![42..43, ..]);
+//     index.add(feats.as_slice_memory_order().unwrap())?;
+//     let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//     debug!(?ret);
+//     let index = index.clone();
+//     let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//     debug!(?ret, "cloned index");
+//     #[cfg(feature = "gpu")]
+//     {
+//         let index = index.into_gpu(1)?;
+//         let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//         debug!(?ret);
+//         let index = index.clone();
+//         let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//         debug!(?ret, "cloned index");
+//     }
+//     Ok(())
+// }
