@@ -1,6 +1,6 @@
 pub(crate) mod sys;
 use std::ffi::CString;
-use std::ptr::addr_of_mut;
+use std::ptr::{addr_of_mut, null_mut};
 use std::time::Instant;
 use tracing::trace;
 
@@ -100,6 +100,21 @@ pub trait Index {
         })?;
         Ok(n_removed)
     }
+
+    fn save<P: AsRef<str>>(&self, pth: P) -> Result<()> {
+        let pth = pth.as_ref();
+        let pth = CString::new(pth)?;
+        faiss_rc!({ sys::faiss_write_index_fname(self.inner() as *const _, pth.as_ptr()) })?;
+        todo!()
+    }
+
+    fn load<P: AsRef<str>>(pth: P) -> Result<CpuIndex> {
+        let pth = pth.as_ref();
+        let pth = CString::new(pth)?;
+        let mut inner = null_mut();
+        faiss_rc!({ sys::faiss_read_index_fname(pth.as_ptr(), 0, addr_of_mut!(inner)) })?;
+        Ok(CpuIndex { inner })
+    }
 }
 
 pub struct IDSelector {
@@ -108,7 +123,7 @@ pub struct IDSelector {
 
 impl IDSelector {
     pub fn batch(ids: &[i64]) -> Result<Self> {
-        let mut inner = 0 as *mut _;
+        let mut inner = null_mut();
         faiss_rc!({
             sys::faiss_IDSelectorBatch_new(addr_of_mut!(inner), ids.len(), ids.as_ptr())
         })?;
@@ -200,8 +215,17 @@ impl CpuIndex {
     }
 }
 
+impl Clone for CpuIndex {
+    fn clone(&self) -> Self {
+        let mut inner = null_mut();
+        faiss_rc!({ sys::faiss_clone_index(self.inner, addr_of_mut!(inner)) })
+            .unwrap_or_else(|_| panic!("failed to clone index with inner={:?}", self.inner));
+        Self { inner }
+    }
+}
+
 pub fn index_factory(d: i32, description: &str, metric: FaissMetricType) -> Result<CpuIndex> {
-    let mut p_index = 0 as *mut _;
+    let mut p_index = null_mut();
     let description_ = CString::new(description)?;
     faiss_rc! {{sys::faiss_index_factory(addr_of_mut!(p_index), d, description_.as_ptr(), metric)}}?;
     trace!(
