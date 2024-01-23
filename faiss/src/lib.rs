@@ -1,11 +1,42 @@
+//! # Faiss
+//!
+//! `faiss` is a light weight rust wrapper for [facebookresearch/faiss](https://github.com/facebookresearch/faiss) c api. Quick example:
+//!
+//! ```rust
+//! use faiss::{index_factory, FaissMetricType};
+//!
+//! //create index
+//! let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2)?;
+//!
+//! //create some random feature
+//! let feats = Array2::random((1024 * 1024, 128), rand::distributions::Uniform::new(0., 1.));
+//!
+//! //get query from position 42
+//! let query = feats.slice(s![42..43, ..]);
+//!
+//! //add features in index
+//! index.add(feats.as_slice_memory_order().unwrap())?;
+//!
+//! //do the search
+//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//! assert_eq!(ret.labels[0], 42i64);
+//!
+//! //move index from cpu to gpu, only available when gpu feature is enabled
+//! let index = index.into_gpu(0)?;
+//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1)?;
+//! assert_eq!(ret.labels[0], 42i64);
+//! ```
 pub(crate) mod sys;
 use std::ffi::CString;
 use std::ptr::{addr_of_mut, null_mut};
 use std::time::Instant;
 use tracing::trace;
 
+/// ## Metric Type
+/// please refer to <https://github.com/facebookresearch/faiss/wiki/MetricType-and-distances>
 pub use sys::FaissMetricType;
 
+/// Error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("{0}")]
@@ -38,15 +69,21 @@ macro_rules! faiss_rc {
     };
 }
 
+/// search result
 #[derive(Debug)]
 pub struct SearchResult {
+    /// - labels of search result
     pub labels: Vec<i64>,
+    /// - distances of search result
     pub distances: Vec<f32>,
 }
 
+/// Index trait, all index should implement this trait
 pub trait Index {
+    /// return inner pointer
     fn inner(&self) -> *mut sys::FaissIndex;
 
+    /// add vectors to index, x.len() should be a multiple of d
     fn add<T: AsRef<[f32]> + ?Sized>(&mut self, x: &T) -> Result<()> {
         let x = x.as_ref();
         faiss_rc! {{sys::faiss_Index_add(self.inner(), (x.len() / self.d())as sys::idx_t, x.as_ptr())}}?;
@@ -54,6 +91,7 @@ pub trait Index {
         Ok(())
     }
 
+    /// search vector against index, `x.len()` should be a multiple of `d`, `k` means top k
     fn search<T: AsRef<[f32]> + ?Sized>(&self, x: &T, k: usize) -> Result<SearchResult> {
         let x = x.as_ref();
         let n = (x.len() / self.d()) as sys::idx_t;
@@ -82,10 +120,12 @@ pub trait Index {
         Ok(SearchResult { labels, distances })
     }
 
+    /// return dimension of index
     fn d(&self) -> usize {
         unsafe { sys::faiss_Index_d(self.inner()) as usize }
     }
 
+    /// train index when some index impl is used, `is_trained` is todo
     fn train<T: AsRef<[f32]> + ?Sized>(&mut self, x: &T) -> Result<()> {
         let x = x.as_ref();
         let n = (x.len() / self.d()) as sys::idx_t;
@@ -93,6 +133,7 @@ pub trait Index {
         Ok(())
     }
 
+    /// remove feature with [IDSelector](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelector.html)
     fn remove_ids(&mut self, sel: IDSelector) -> Result<usize> {
         let mut n_removed = 0usize;
         faiss_rc!({
@@ -101,6 +142,7 @@ pub trait Index {
         Ok(n_removed)
     }
 
+    /// save index to disk
     fn save<P: AsRef<str>>(&self, pth: P) -> Result<()> {
         let pth = pth.as_ref();
         let pth = CString::new(pth)?;
@@ -108,6 +150,7 @@ pub trait Index {
         todo!()
     }
 
+    /// load index from disk
     fn load<P: AsRef<str>>(pth: P) -> Result<CpuIndex> {
         let pth = pth.as_ref();
         let pth = CString::new(pth)?;
@@ -117,11 +160,13 @@ pub trait Index {
     }
 }
 
+/// Select ID to delete feature in index [IDSelector](https://faiss.ai/cpp_api/struct/structfaiss_1_1IDSelector.html)
 pub struct IDSelector {
     pub inner: *mut sys::FaissIDSelector,
 }
 
 impl IDSelector {
+    /// create a selector from batch ids
     pub fn batch(ids: &[i64]) -> Result<Self> {
         let mut inner = null_mut();
         faiss_rc!({
@@ -139,6 +184,7 @@ impl Drop for IDSelector {
     }
 }
 
+/// Index use cpu
 #[derive(Debug)]
 pub struct CpuIndex {
     pub inner: *mut sys::FaissIndex,
@@ -160,6 +206,7 @@ impl Index for CpuIndex {
 }
 
 impl CpuIndex {
+    /// create multi gpu index, `devices` is a list of gpu device id, `split` means split index on multiple gpu or not
     #[cfg(feature = "gpu")]
     pub fn to_multi_gpu(&self, devices: &[i32], split: bool) -> Result<gpu::GpuIndex> {
         let mut p_out = 0 as *mut _;
@@ -191,11 +238,13 @@ impl CpuIndex {
         })
     }
 
+    /// create multi gpu index, `devices` is a list of gpu device id, `split` means split index on multiple gpu or not, cpu index will be dropped
     #[cfg(feature = "gpu")]
     pub fn into_multi_gpu(self, devices: &[i32], split: bool) -> Result<gpu::GpuIndex> {
         self.to_multi_gpu(devices, split)
     }
 
+    /// create gpu index, `device` is gpu device id
     #[cfg(feature = "gpu")]
     pub fn to_gpu(&self, device: i32) -> Result<gpu::GpuIndex> {
         let mut p_out = 0 as *mut _;
@@ -218,6 +267,7 @@ impl CpuIndex {
         })
     }
 
+    /// create gpu index, `device` is gpu device id, cpu index will be dropped
     #[cfg(feature = "gpu")]
     pub fn into_gpu(self, device: i32) -> Result<gpu::GpuIndex> {
         self.to_gpu(device)
@@ -233,6 +283,7 @@ impl Clone for CpuIndex {
     }
 }
 
+/// helper function to create cpu index, please refer to [doc](https://github.com/facebookresearch/faiss/wiki/The-index-factory) for details of `description` and `metric`
 pub fn index_factory(d: i32, description: &str, metric: FaissMetricType) -> Result<CpuIndex> {
     let mut p_index = null_mut();
     let description_ = CString::new(description)?;
@@ -246,17 +297,25 @@ pub fn index_factory(d: i32, description: &str, metric: FaissMetricType) -> Resu
     Ok(CpuIndex { inner: p_index })
 }
 
+///  gpu related module
 #[cfg(feature = "gpu")]
 pub mod gpu {
     use super::{addr_of_mut, null_mut, sys, Error, Index};
     use tracing::trace;
+
+    /// gpu index
     pub struct GpuIndex {
+        /// - index is splitted on multiple gpu or not
         pub splitted: bool,
+        /// - gpu device used by index
         pub devices: Vec<i32>,
+        /// - gpu resource provider of faiss
         pub providers: Vec<GpuResourcesProvider>,
+        /// - raw pointer
         pub inner: *mut sys::FaissGpuIndex,
     }
 
+    /// gpu resource provider
     #[derive(Debug)]
     pub struct GpuResourcesProvider {
         pub inner: *mut sys::FaissGpuResourcesProvider,
@@ -306,6 +365,7 @@ pub mod gpu {
     }
 
     impl Clone for GpuIndex {
+        /// to clone gpu index, we need to clone index to cpu index first, then move this gpu index to  gpu index, kinds of stupid.
         fn clone(&self) -> Self {
             let cpu = self
                 .to_cpu()
