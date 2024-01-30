@@ -2,7 +2,7 @@
 name = "faiss-next-sys"
 version = "0.1.3"
 edition = "2021"
-license = "MIT"
+license = "MIT License"
 description = "Light weighted rust wrapper of c api of facebookresearch/faiss library"
 homepage = "http://github.com/yexiangyu/faiss-next"
 documentation = "https://docs.rs/faiss-next"
@@ -15,9 +15,11 @@ keywords = ["faiss"]
 default = []
 gpu = []
 bindgen = []
+system = []
 
 [build-dependencies]
 bindgen = "0.69.2"
+cmake = "0.1.50"
+cfg-if = "1.0.0"
 
 [dependencies]
-cmake = "0.1.50"

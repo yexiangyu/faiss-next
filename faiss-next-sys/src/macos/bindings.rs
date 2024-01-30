@@ -15,15 +15,24 @@ pub struct FaissIDSelector_H {
 }
 pub type FaissIDSelector = FaissIDSelector_H;
 #[repr(u32)]
+#[doc = " Some algorithms support both an inner product version and a L2 search\n version."]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum FaissMetricType {
+    #[doc = "< maximum inner product search"]
     METRIC_INNER_PRODUCT = 0,
+    #[doc = "< squared L2 search"]
     METRIC_L2 = 1,
+    #[doc = "< L1 (aka cityblock)"]
     METRIC_L1 = 2,
+    #[doc = "< infinity distance"]
     METRIC_Linf = 3,
+    #[doc = "< L_p distance, p is given by metric_arg"]
     METRIC_Lp = 4,
+    #[doc = " some additional metrics defined in scipy.spatial.distance"]
     METRIC_Canberra = 20,
+    #[doc = " some additional metrics defined in scipy.spatial.distance"]
     METRIC_BrayCurtis = 21,
+    #[doc = " some additional metrics defined in scipy.spatial.distance"]
     METRIC_JensenShannon = 22,
 }
 #[repr(C)]
@@ -69,6 +78,7 @@ extern "C" {
     pub fn faiss_Index_set_verbose(arg1: *mut FaissIndex, arg2: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " Perform training on a representative set of vectors\n\n @param index  opaque pointer to index object\n @param n      nb of training vectors\n @param x      training vectors, size n * d"]
     pub fn faiss_Index_train(
         index: *mut FaissIndex,
         n: idx_t,
@@ -76,6 +86,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Add n vectors of dimension d to the index.\n\n Vectors are implicitly assigned labels ntotal .. ntotal + n - 1\n This function slices the input vectors in chunks smaller than\n blocksize_add and calls add_core.\n @param index  opaque pointer to index object\n @param x      input matrix, size n * d"]
     pub fn faiss_Index_add(
         index: *mut FaissIndex,
         n: idx_t,
@@ -83,6 +94,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Same as add, but stores xids instead of sequential ids.\n\n The default implementation fails with an assertion, as it is\n not supported by all indexes.\n\n @param index  opaque pointer to index object\n @param xids   if non-null, ids to store for the vectors (size n)"]
     pub fn faiss_Index_add_with_ids(
         index: *mut FaissIndex,
         n: idx_t,
@@ -91,6 +103,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " query n vectors of dimension d to the index.\n\n return at most k vectors. If there are not enough results for a\n query, the result array is padded with -1s.\n\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param labels      output labels of the NNs, size n*k\n @param distances   output pairwise distances, size n*k"]
     pub fn faiss_Index_search(
         index: *const FaissIndex,
         n: idx_t,
@@ -101,6 +114,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " query n vectors of dimension d with search parameters to the index.\n\n return at most k vectors. If there are not enough results for a query,\n the result is padded with -1s.\n\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param params      input params to modify how search is done\n @param labels      output labels of the NNs, size n*k\n @param distances   output pairwise distances, size n*k"]
     pub fn faiss_Index_search_with_params(
         index: *const FaissIndex,
         n: idx_t,
@@ -112,6 +126,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " query n vectors of dimension d to the index.\n\n return all vectors with distance < radius. Note that many\n indexes do not implement the range_search (only the k-NN search\n is mandatory).\n\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param radius      search radius\n @param result      result table"]
     pub fn faiss_Index_range_search(
         index: *const FaissIndex,
         n: idx_t,
@@ -121,6 +136,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " return the indexes of the k vectors closest to the query x.\n\n This function is identical as search but only return labels of neighbors.\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param labels      output labels of the NNs, size n*k"]
     pub fn faiss_Index_assign(
         index: *mut FaissIndex,
         n: idx_t,
@@ -130,9 +146,11 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " removes all elements from the database.\n @param index       opaque pointer to index object"]
     pub fn faiss_Index_reset(index: *mut FaissIndex) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " removes IDs from the index. Not supported by all indexes\n @param index       opaque pointer to index object\n @param nremove     output for the number of IDs removed"]
     pub fn faiss_Index_remove_ids(
         index: *mut FaissIndex,
         sel: *const FaissIDSelector,
@@ -140,6 +158,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Reconstruct a stored vector (or an approximation if lossy coding)\n\n this function may not be defined for some indexes\n @param index       opaque pointer to index object\n @param key         id of the vector to reconstruct\n @param recons      reconstructed vector (size d)"]
     pub fn faiss_Index_reconstruct(
         index: *const FaissIndex,
         key: idx_t,
@@ -147,6 +166,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Reconstruct vectors i0 to i0 + ni - 1\n\n this function may not be defined for some indexes\n @param index       opaque pointer to index object\n @param recons      reconstructed vector (size ni * d)"]
     pub fn faiss_Index_reconstruct_n(
         index: *const FaissIndex,
         i0: idx_t,
@@ -155,6 +175,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Computes a residual vector after indexing encoding.\n\n The residual vector is the difference between a vector and the\n reconstruction that can be decoded from its representation in\n the index. The residual can be used for multiple-stage indexing\n methods, like IndexIVF's methods.\n\n @param index       opaque pointer to index object\n @param x           input vector, size d\n @param residual    output residual vector, size d\n @param key         encoded index, as returned by search and assign"]
     pub fn faiss_Index_compute_residual(
         index: *const FaissIndex,
         x: *const f32,
@@ -163,6 +184,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Computes a residual vector after indexing encoding.\n\n The residual vector is the difference between a vector and the\n reconstruction that can be decoded from its representation in\n the index. The residual can be used for multiple-stage indexing\n methods, like IndexIVF's methods.\n\n @param index       opaque pointer to index object\n @param n           number of vectors\n @param x           input vector, size (n x d)\n @param residuals    output residual vectors, size (n x d)\n @param keys         encoded index, as returned by search and assign"]
     pub fn faiss_Index_compute_residual_n(
         index: *const FaissIndex,
         n: idx_t,
@@ -172,12 +194,14 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " The size of the produced codes in bytes.\n\n @param index   opaque pointer to index object\n @param size    the returned size in bytes"]
     pub fn faiss_Index_sa_code_size(
         index: *const FaissIndex,
         size: *mut usize,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " encode a set of vectors\n\n @param index   opaque pointer to index object\n @param n       number of vectors\n @param x       input vectors, size n * d\n @param bytes   output encoded vectors, size n * sa_code_size()"]
     pub fn faiss_Index_sa_encode(
         index: *const FaissIndex,
         n: idx_t,
@@ -186,6 +210,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " decode a set of vectors\n\n @param index   opaque pointer to index object\n @param n       number of vectors\n @param bytes   input encoded vectors, size n * sa_code_size()\n @param x       output vectors, size n * d"]
     pub fn faiss_Index_sa_decode(
         index: *const FaissIndex,
         n: idx_t,
@@ -205,6 +230,7 @@ extern "C" {
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
+    #[doc = " Getter for the values in the range. The output values are invalidated\n upon any other modification of the range."]
     pub fn faiss_ParameterRange_values(
         arg1: *mut FaissParameterRange,
         arg2: *mut *mut f64,
@@ -221,12 +247,15 @@ extern "C" {
     pub fn faiss_ParameterSpace_free(obj: *mut FaissParameterSpace);
 }
 extern "C" {
+    #[doc = " Parameter space default constructor"]
     pub fn faiss_ParameterSpace_new(space: *mut *mut FaissParameterSpace) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " nb of combinations, = product of values sizes"]
     pub fn faiss_ParameterSpace_n_combinations(arg1: *const FaissParameterSpace) -> usize;
 }
 extern "C" {
+    #[doc = " get string representation of the combination\n by writing it to the given character buffer.\n A buffer size of 1000 ensures that the full name is collected."]
     pub fn faiss_ParameterSpace_combination_name(
         arg1: *const FaissParameterSpace,
         arg2: usize,
@@ -235,6 +264,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " set a combination of parameters described by a string"]
     pub fn faiss_ParameterSpace_set_index_parameters(
         arg1: *const FaissParameterSpace,
         arg2: *mut FaissIndex,
@@ -242,6 +272,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " set a combination of parameters on an index"]
     pub fn faiss_ParameterSpace_set_index_parameters_cno(
         arg1: *const FaissParameterSpace,
         arg2: *mut FaissIndex,
@@ -249,6 +280,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " set one of the parameters"]
     pub fn faiss_ParameterSpace_set_index_parameter(
         arg1: *const FaissParameterSpace,
         arg2: *mut FaissIndex,
@@ -257,31 +289,46 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " print a description on stdout"]
     pub fn faiss_ParameterSpace_display(arg1: *const FaissParameterSpace);
 }
 extern "C" {
+    #[doc = " add a new parameter (or return it if it exists)"]
     pub fn faiss_ParameterSpace_add_range(
         arg1: *mut FaissParameterSpace,
         arg2: *const ::std::os::raw::c_char,
         arg3: *mut *mut FaissParameterRange,
     ) -> ::std::os::raw::c_int;
 }
+#[doc = " Class for the clustering parameters. Can be passed to the\n constructor of the Clustering object."]
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct FaissClusteringParameters {
+    #[doc = "< clustering iterations"]
     pub niter: ::std::os::raw::c_int,
+    #[doc = "< redo clustering this many times and keep best"]
     pub nredo: ::std::os::raw::c_int,
+    #[doc = "< (bool)"]
     pub verbose: ::std::os::raw::c_int,
+    #[doc = "< (bool) do we want normalized centroids?"]
     pub spherical: ::std::os::raw::c_int,
+    #[doc = "< (bool) round centroids coordinates to integer"]
     pub int_centroids: ::std::os::raw::c_int,
+    #[doc = "< (bool) update index after each iteration?"]
     pub update_index: ::std::os::raw::c_int,
+    #[doc = "< (bool) use the centroids provided as input and do\n< not change them during iterations"]
     pub frozen_centroids: ::std::os::raw::c_int,
+    #[doc = "< otherwise you get a warning"]
     pub min_points_per_centroid: ::std::os::raw::c_int,
+    #[doc = "< to limit size of dataset"]
     pub max_points_per_centroid: ::std::os::raw::c_int,
+    #[doc = "< seed for the random number generator"]
     pub seed: ::std::os::raw::c_int,
+    #[doc = "< how many vectors at a time to decode"]
     pub decode_block_size: usize,
 }
 extern "C" {
+    #[doc = " Sets the ClusteringParameters object with reasonable defaults"]
     pub fn faiss_ClusteringParameters_init(params: *mut FaissClusteringParameters);
 }
 #[repr(C)]
@@ -362,6 +409,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " getter for centroids (size = k * d)"]
     pub fn faiss_Clustering_centroids(
         clustering: *mut FaissClustering,
         centroids: *mut *mut f32,
@@ -369,6 +417,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " getter for iteration stats"]
     pub fn faiss_Clustering_iteration_stats(
         clustering: *mut FaissClustering,
         iteration_stats: *mut *mut FaissClusteringIterationStats,
@@ -376,6 +425,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " the only mandatory parameters are k and d"]
     pub fn faiss_Clustering_new(
         p_clustering: *mut *mut FaissClustering,
         d: ::std::os::raw::c_int,
@@ -402,6 +452,7 @@ extern "C" {
     pub fn faiss_Clustering_free(clustering: *mut FaissClustering);
 }
 extern "C" {
+    #[doc = " simplified interface\n\n @param d dimension of the data\n @param n nb of training vectors\n @param k nb of output centroids\n @param x training set (size n * d)\n @param centroids output centroids (size k * d)\n @param q_error final quantization error\n @return error code"]
     pub fn faiss_kmeans_clustering(
         d: usize,
         n: usize,
@@ -439,6 +490,7 @@ extern "C" {
     pub fn faiss_IndexBinary_set_verbose(arg1: *mut FaissIndexBinary, arg2: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " Perform training on a representative set of vectors\n\n @param index  opaque pointer to index object\n @param n      nb of training vectors\n @param x      training vectors, size n * d"]
     pub fn faiss_IndexBinary_train(
         index: *mut FaissIndexBinary,
         n: idx_t,
@@ -446,6 +498,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Add n vectors of dimension d to the index.\n\n Vectors are implicitly assigned labels ntotal .. ntotal + n - 1\n This function slices the input vectors in chunks smaller than\n blocksize_add and calls add_core.\n @param index  opaque pointer to index object\n @param x      input matrix, size n * d"]
     pub fn faiss_IndexBinary_add(
         index: *mut FaissIndexBinary,
         n: idx_t,
@@ -453,6 +506,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Same as add, but stores xids instead of sequential ids.\n\n The default implementation fails with an assertion, as it is\n not supported by all indexes.\n\n @param index  opaque pointer to index object\n @param xids   if non-null, ids to store for the vectors (size n)"]
     pub fn faiss_IndexBinary_add_with_ids(
         index: *mut FaissIndexBinary,
         n: idx_t,
@@ -461,6 +515,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " query n vectors of dimension d to the index.\n\n return at most k vectors. If there are not enough results for a\n query, the result array is padded with -1s.\n\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param labels      output labels of the NNs, size n*k\n @param distances   output pairwise distances, size n*k"]
     pub fn faiss_IndexBinary_search(
         index: *const FaissIndexBinary,
         n: idx_t,
@@ -471,6 +526,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " query n vectors of dimension d to the index.\n\n return all vectors with distance < radius. Note that many\n indexes do not implement the range_search (only the k-NN search\n is mandatory).\n\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param radius      search radius\n @param result      result table"]
     pub fn faiss_IndexBinary_range_search(
         index: *const FaissIndexBinary,
         n: idx_t,
@@ -480,6 +536,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " return the indexes of the k vectors closest to the query x.\n\n This function is identical as search but only return labels of neighbors.\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param labels      output labels of the NNs, size n*k"]
     pub fn faiss_IndexBinary_assign(
         index: *mut FaissIndexBinary,
         n: idx_t,
@@ -489,9 +546,11 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " removes all elements from the database.\n @param index       opaque pointer to index object"]
     pub fn faiss_IndexBinary_reset(index: *mut FaissIndexBinary) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " removes IDs from the index. Not supported by all indexes\n @param index       opaque pointer to index object\n @param nremove     output for the number of IDs removed"]
     pub fn faiss_IndexBinary_remove_ids(
         index: *mut FaissIndexBinary,
         sel: *const FaissIDSelector,
@@ -499,6 +558,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Reconstruct a stored vector (or an approximation if lossy coding)\n\n this function may not be defined for some indexes\n @param index       opaque pointer to index object\n @param key         id of the vector to reconstruct\n @param recons      reconstructed vector (size d)"]
     pub fn faiss_IndexBinary_reconstruct(
         index: *const FaissIndexBinary,
         key: idx_t,
@@ -506,6 +566,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Reconstruct vectors i0 to i0 + ni - 1\n\n this function may not be defined for some indexes\n @param index       opaque pointer to index object\n @param recons      reconstructed vector (size ni * d)"]
     pub fn faiss_IndexBinary_reconstruct_n(
         index: *const FaissIndexBinary,
         i0: idx_t,
@@ -515,6 +576,7 @@ extern "C" {
 }
 pub type FaissIndexFlat = FaissIndex_H;
 extern "C" {
+    #[doc = " Opaque type for IndexFlat"]
     pub fn faiss_IndexFlat_new(p_index: *mut *mut FaissIndexFlat) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -525,6 +587,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " get a pointer to the index's internal data (the `xb` field). The outputs\n become invalid after any data addition or removal operation.\n\n @param index   opaque pointer to index object\n @param p_xb    output, the pointer to the beginning of `xb`.\n @param p_size  output, the current size of `sb` in number of float values."]
     pub fn faiss_IndexFlat_xb(index: *mut FaissIndexFlat, p_xb: *mut *mut f32, p_size: *mut usize);
 }
 extern "C" {
@@ -534,6 +597,7 @@ extern "C" {
     pub fn faiss_IndexFlat_free(obj: *mut FaissIndexFlat);
 }
 extern "C" {
+    #[doc = " compute distance with a subset of vectors\n\n @param index   opaque pointer to index object\n @param x       query vectors, size n * d\n @param labels  indices of the vectors that should be compared\n                for each query vector, size n * k\n @param distances\n                corresponding output distances, size n * k"]
     pub fn faiss_IndexFlat_compute_distance_subset(
         index: *mut FaissIndex,
         n: idx_t,
@@ -551,6 +615,7 @@ extern "C" {
     pub fn faiss_IndexFlatIP_free(obj: *mut FaissIndexFlatIP);
 }
 extern "C" {
+    #[doc = " Opaque type for IndexFlatIP"]
     pub fn faiss_IndexFlatIP_new(p_index: *mut *mut FaissIndexFlatIP) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -567,6 +632,7 @@ extern "C" {
     pub fn faiss_IndexFlatL2_free(obj: *mut FaissIndexFlatL2);
 }
 extern "C" {
+    #[doc = " Opaque type for IndexFlatL2"]
     pub fn faiss_IndexFlatL2_new(p_index: *mut *mut FaissIndexFlatL2) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -577,6 +643,7 @@ extern "C" {
 }
 pub type FaissIndexRefineFlat = FaissIndex_H;
 extern "C" {
+    #[doc = " Opaque type for IndexRefineFlat\n\n Index that queries in a base_index (a fast one) and refines the\n results with an exact search, hopefully improving the results."]
     pub fn faiss_IndexRefineFlat_new(
         p_index: *mut *mut FaissIndexRefineFlat,
         base_index: *mut FaissIndex,
@@ -613,6 +680,7 @@ extern "C" {
     pub fn faiss_IndexFlat1D_free(obj: *mut FaissIndexFlat1D);
 }
 extern "C" {
+    #[doc = " Opaque type for IndexFlat1D\n\n optimized version for 1D \"vectors\""]
     pub fn faiss_IndexFlat1D_new(p_index: *mut *mut FaissIndexFlat1D) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -660,6 +728,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " whether object owns the quantizer"]
     pub fn faiss_IndexIVFFlat_new(p_index: *mut *mut FaissIndexIVFFlat) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -689,6 +758,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Update a subset of vectors.\n\n The index must have a direct_map\n\n @param nv     nb of vectors to update\n @param idx    vector indices to update, size nv\n @param v      vectors of new values, size nv*d"]
     pub fn faiss_IndexIVFFlat_update_vectors(
         index: *mut FaissIndexIVFFlat,
         nv: ::std::os::raw::c_int,
@@ -713,6 +783,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " called when lims contains the nb of elements result entries\n for each query"]
     pub fn faiss_RangeSearchResult_do_allocation(
         rsr: *mut FaissRangeSearchResult,
     ) -> ::std::os::raw::c_int;
@@ -724,9 +795,11 @@ extern "C" {
     pub fn faiss_RangeSearchResult_buffer_size(arg1: *const FaissRangeSearchResult) -> usize;
 }
 extern "C" {
+    #[doc = " getter for lims: size (nq + 1)"]
     pub fn faiss_RangeSearchResult_lims(rsr: *mut FaissRangeSearchResult, lims: *mut *mut usize);
 }
 extern "C" {
+    #[doc = " getter for labels and respective distances (not sorted):\n result for query i is labels[lims[i]:lims[i+1]]"]
     pub fn faiss_RangeSearchResult_labels(
         rsr: *mut FaissRangeSearchResult,
         labels: *mut *mut idx_t,
@@ -737,6 +810,7 @@ extern "C" {
     pub fn faiss_IDSelector_free(obj: *mut FaissIDSelector);
 }
 extern "C" {
+    #[doc = " Encapsulates a set of ids to remove."]
     pub fn faiss_IDSelector_is_member(
         sel: *const FaissIDSelector,
         id: idx_t,
@@ -758,6 +832,7 @@ extern "C" {
     pub fn faiss_IDSelectorRange_imax(arg1: *const FaissIDSelectorRange) -> idx_t;
 }
 extern "C" {
+    #[doc = " remove ids between [imni, imax)"]
     pub fn faiss_IDSelectorRange_new(
         p_sel: *mut *mut FaissIDSelectorRange,
         imin: idx_t,
@@ -777,6 +852,7 @@ extern "C" {
     pub fn faiss_IDSelectorBatch_mask(arg1: *const FaissIDSelectorBatch) -> idx_t;
 }
 extern "C" {
+    #[doc = " Remove ids from a set. Repetitions of ids in the indices set\n passed to the constructor does not hurt performance. The hash\n function used for the bloom filter and GCC's implementation of\n unordered_set are just the least significant bits of the id. This\n works fine for random ids or ids in sequences but will produce many\n hash collisions if lsb's are always the same"]
     pub fn faiss_IDSelectorBatch_new(
         p_sel: *mut *mut FaissIDSelectorBatch,
         n: usize,
@@ -849,6 +925,7 @@ extern "C" {
 extern "C" {
     pub fn faiss_BufferList_wp(arg1: *const FaissBufferList) -> usize;
 }
+#[doc = " List of temporary buffers used to store results before they are\n  copied to the RangeSearchResult object."]
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct FaissBuffer {
@@ -872,6 +949,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " copy elemnts ofs:ofs+n-1 seen as linear data in the buffers to\n tables dest_ids, dest_dis"]
     pub fn faiss_BufferList_copy_range(
         bl: *mut FaissBufferList,
         ofs: usize,
@@ -904,6 +982,7 @@ extern "C" {
     ) -> *mut FaissRangeSearchPartialResult;
 }
 extern "C" {
+    #[doc = " result structure for a single query"]
     pub fn faiss_RangeQueryResult_add(
         qr: *mut FaissRangeQueryResult,
         dis: f32,
@@ -927,6 +1006,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " called by range_search before do_allocation"]
     pub fn faiss_RangeSearchPartialResult_set_lims(
         res: *mut FaissRangeSearchPartialResult,
     ) -> ::std::os::raw::c_int;
@@ -945,12 +1025,14 @@ pub struct FaissDistanceComputer_H {
 }
 pub type FaissDistanceComputer = FaissDistanceComputer_H;
 extern "C" {
+    #[doc = " called before computing distances"]
     pub fn faiss_DistanceComputer_set_query(
         dc: *mut FaissDistanceComputer,
         x: *const f32,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Compute distance of vector i to current query.\n This function corresponds to the function call operator:\n DistanceComputer::operator()"]
     pub fn faiss_DistanceComputer_vector_to_query_dis(
         dc: *mut FaissDistanceComputer,
         i: idx_t,
@@ -958,6 +1040,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " compute distance between two stored vectors"]
     pub fn faiss_DistanceComputer_symmetric_dis(
         dc: *mut FaissDistanceComputer,
         i: idx_t,
@@ -1041,6 +1124,7 @@ extern "C" {
     pub fn faiss_IndexIVF_set_own_fields(arg1: *mut FaissIndexIVF, arg2: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " moves the entries from another dataset to self. On output,\n other is empty. add_id is added to all moved ids (for\n sequential ids, this would be this->ntotal"]
     pub fn faiss_IndexIVF_merge_from(
         index: *mut FaissIndexIVF,
         other: *mut FaissIndexIVF,
@@ -1048,6 +1132,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " copy a subset of the entries index to the other index\n\n if subset_type == 0: copies ids in [a1, a2)\n if subset_type == 1: copies ids if id % a1 == a2\n if subset_type == 2: copies inverted lists such that a1\n                      elements are left before and a2 elements are after"]
     pub fn faiss_IndexIVF_copy_subset_to(
         index: *const FaissIndexIVF,
         other: *mut FaissIndexIVF,
@@ -1057,6 +1142,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " search a set of vectors, that are pre-quantized by the IVF\n  quantizer. Fill in the corresponding heaps with the query\n  results. search() calls this.\n\n @param n      nb of vectors to query\n @param x      query vectors, size nx * d\n @param assign coarse quantization indices, size nx * nprobe\n @param centroid_dis\n               distances to coarse centroids, size nx * nprobe\n @param distance\n               output distances, size n * k\n @param labels output labels, size n * k\n @param store_pairs store inv list index + inv list offset\n                     instead in upper/lower 32 bit of result,\n                     instead of ids (used for reranking)."]
     pub fn faiss_IndexIVF_search_preassigned(
         index: *const FaissIndexIVF,
         n: idx_t,
@@ -1073,23 +1159,35 @@ extern "C" {
     pub fn faiss_IndexIVF_get_list_size(index: *const FaissIndexIVF, list_no: usize) -> usize;
 }
 extern "C" {
+    #[doc = " initialize a direct map\n\n @param new_maintain_direct_map    if true, create a direct map,\n                                   else clear it"]
     pub fn faiss_IndexIVF_make_direct_map(
         index: *mut FaissIndexIVF,
         new_maintain_direct_map: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Check the inverted lists' imbalance factor.\n\n 1= perfectly balanced, >1: imbalanced"]
     pub fn faiss_IndexIVF_imbalance_factor(index: *const FaissIndexIVF) -> f64;
 }
 extern "C" {
+    #[doc = " display some stats about the inverted lists of the index"]
     pub fn faiss_IndexIVF_print_stats(index: *const FaissIndexIVF);
 }
 extern "C" {
+    #[doc = " Get the IDs in an inverted list. IDs are written to `invlist`, which must be\n large enough\n to accommodate the full list.\n\n @param list_no the list ID\n @param invlist output pointer to a slice of memory, at least as long as the\n list's size\n @see faiss_IndexIVF_get_list_size(size_t)"]
     pub fn faiss_IndexIVF_invlists_get_ids(
         index: *const FaissIndexIVF,
         list_no: usize,
         invlist: *mut idx_t,
     );
+}
+extern "C" {
+    pub fn faiss_IndexIVF_train_encoder(
+        index: *mut FaissIndexIVF,
+        n: idx_t,
+        x: *const f32,
+        assign: *const idx_t,
+    ) -> ::std::os::raw::c_int;
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -1105,6 +1203,7 @@ extern "C" {
     pub fn faiss_IndexIVFStats_reset(stats: *mut FaissIndexIVFStats);
 }
 extern "C" {
+    #[doc = " global var that collects all statists"]
     pub fn faiss_get_indexIVF_stats() -> *mut FaissIndexIVFStats;
 }
 pub type FaissIndexLSH = FaissIndex_H;
@@ -1127,6 +1226,7 @@ extern "C" {
     pub fn faiss_IndexLSH_train_thresholds(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " The sign of each vector component is put in a binary signature"]
     pub fn faiss_IndexLSH_new(
         p_index: *mut *mut FaissIndexLSH,
         d: idx_t,
@@ -1163,6 +1263,7 @@ extern "C" {
     pub fn faiss_VectorTransform_d_out(arg1: *const FaissVectorTransform) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Perform training on a representative set of vectors\n\n @param vt     opaque pointer to VectorTransform object\n @param n      nb of training vectors\n @param x      training vectors, size n * d"]
     pub fn faiss_VectorTransform_train(
         vt: *mut FaissVectorTransform,
         n: idx_t,
@@ -1170,6 +1271,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " apply the random rotation, return new allocated matrix\n @param     x size n * d_in\n @return    size n * d_out"]
     pub fn faiss_VectorTransform_apply(
         vt: *const FaissVectorTransform,
         n: idx_t,
@@ -1177,6 +1279,7 @@ extern "C" {
     ) -> *mut f32;
 }
 extern "C" {
+    #[doc = " apply transformation and result is pre-allocated\n @param     x size n * d_in\n @param     xt size n * d_out"]
     pub fn faiss_VectorTransform_apply_noalloc(
         vt: *const FaissVectorTransform,
         n: idx_t,
@@ -1185,6 +1288,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " reverse transformation. May not be implemented or may return\n approximate result"]
     pub fn faiss_VectorTransform_reverse_transform(
         vt: *const FaissVectorTransform,
         n: idx_t,
@@ -1197,6 +1301,7 @@ extern "C" {
     pub fn faiss_LinearTransform_free(obj: *mut FaissLinearTransform);
 }
 extern "C" {
+    #[doc = " compute x = A^T * (x - b)\n is reverse transform if A has orthonormal lines"]
     pub fn faiss_LinearTransform_transform_transpose(
         vt: *const FaissLinearTransform,
         n: idx_t,
@@ -1205,6 +1310,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " compute A^T * A to set the is_orthonormal flag"]
     pub fn faiss_LinearTransform_set_is_orthonormal(vt: *mut FaissLinearTransform);
 }
 extern "C" {
@@ -1222,6 +1328,7 @@ extern "C" {
     pub fn faiss_RandomRotationMatrix_free(obj: *mut FaissRandomRotationMatrix);
 }
 extern "C" {
+    #[doc = " Getter for is_orthonormal"]
     pub fn faiss_RandomRotationMatrix_new_with(
         p_vt: *mut *mut FaissRandomRotationMatrix,
         d_in: ::std::os::raw::c_int,
@@ -1252,6 +1359,7 @@ extern "C" {
     pub fn faiss_ITQMatrix_free(obj: *mut FaissITQMatrix);
 }
 extern "C" {
+    #[doc = " Getter for random_rotation"]
     pub fn faiss_ITQMatrix_new_with(
         p_vt: *mut *mut FaissITQMatrix,
         d: ::std::os::raw::c_int,
@@ -1277,6 +1385,7 @@ extern "C" {
     pub fn faiss_OPQMatrix_free(obj: *mut FaissOPQMatrix);
 }
 extern "C" {
+    #[doc = " Getter for do_pca"]
     pub fn faiss_OPQMatrix_new_with(
         p_vt: *mut *mut FaissOPQMatrix,
         d: ::std::os::raw::c_int,
@@ -1360,6 +1469,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " Index that applies a LinearTransform transform on vectors before\n  handing them over to a sub-index"]
     pub fn faiss_IndexPreTransform_new(
         p_index: *mut *mut FaissIndexPreTransform,
     ) -> ::std::os::raw::c_int;
@@ -1398,6 +1508,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " Index that concatenates the results from several sub-indexes"]
     pub fn faiss_IndexReplicas_new(
         p_index: *mut *mut FaissIndexReplicas,
         d: idx_t,
@@ -1431,16 +1542,22 @@ extern "C" {
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum FaissQuantizerType {
+    #[doc = "< 8 bits per component"]
     QT_8bit = 0,
+    #[doc = "< 4 bits per component"]
     QT_4bit = 1,
+    #[doc = "< same, shared range for all dimensions"]
     QT_8bit_uniform = 2,
     QT_4bit_uniform = 3,
     QT_fp16 = 4,
+    #[doc = "< fast indexing of uint8s"]
     QT_8bit_direct = 5,
+    #[doc = "< 6 bits per component"]
     QT_6bit = 6,
 }
 pub type FaissIndexScalarQuantizer = FaissIndex_H;
 extern "C" {
+    #[doc = " Opaque type for IndexScalarQuantizer"]
     pub fn faiss_IndexScalarQuantizer_new(
         p_index: *mut *mut FaissIndexScalarQuantizer,
     ) -> ::std::os::raw::c_int;
@@ -1470,6 +1587,7 @@ extern "C" {
     pub fn faiss_IndexIVFScalarQuantizer_free(obj: *mut FaissIndexIVFScalarQuantizer);
 }
 extern "C" {
+    #[doc = " Opaque type for IndexIVFScalarQuantizer"]
     pub fn faiss_IndexIVFScalarQuantizer_new(
         p_index: *mut *mut FaissIndexIVFScalarQuantizer,
     ) -> ::std::os::raw::c_int;
@@ -1524,19 +1642,13 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " whether object owns the quantizer"]
     pub fn faiss_IndexIVFScalarQuantizer_add_core(
         index: *mut FaissIndexIVFScalarQuantizer,
         n: idx_t,
         x: *const f32,
         xids: *const idx_t,
         precomputed_idx: *const idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_train_residual(
-        index: *mut FaissIndexIVFScalarQuantizer,
-        n: idx_t,
-        x: *const f32,
     ) -> ::std::os::raw::c_int;
 }
 pub type FaissIndexShards = FaissIndex_H;
@@ -1563,6 +1675,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " Index that concatenates the results from several sub-indexes"]
     pub fn faiss_IndexShards_new(
         p_index: *mut *mut FaissIndexShards,
         d: idx_t,
@@ -1602,6 +1715,7 @@ extern "C" {
     pub fn faiss_IndexIDMap_set_own_fields(arg1: *mut FaissIndexIDMap, arg2: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " Index that translates search results to ids"]
     pub fn faiss_IndexIDMap_new(
         p_index: *mut *mut FaissIndexIDMap,
         index: *mut FaissIndex,
@@ -1611,6 +1725,7 @@ extern "C" {
     pub fn faiss_IndexIDMap_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIDMap;
 }
 extern "C" {
+    #[doc = " get a pointer to the index map's internal ID vector (the `id_map` field).\n The outputs of this function become invalid after any operation that can\n modify the index.\n\n @param index   opaque pointer to index object\n @param p_id_map    output, the pointer to the beginning of `id_map`.\n @param p_size  output, the current length of `id_map`."]
     pub fn faiss_IndexIDMap_id_map(
         index: *mut FaissIndexIDMap,
         p_id_map: *mut *mut idx_t,
@@ -1618,6 +1733,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " get a pointer to the sub-index (the `index` field).\n The outputs of this function become invalid after any operation that can\n modify the index.\n\n @param index   opaque pointer to index object"]
     pub fn faiss_IndexIDMap_sub_index(index: *mut FaissIndexIDMap) -> *mut FaissIndex;
 }
 pub type FaissIndexIDMap2 = FaissIndex_H;
@@ -1631,12 +1747,14 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " same as IndexIDMap but also provides an efficient reconstruction\nimplementation via a 2-way index"]
     pub fn faiss_IndexIDMap2_new(
         p_index: *mut *mut FaissIndexIDMap2,
         index: *mut FaissIndex,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " make the rev_map from scratch"]
     pub fn faiss_IndexIDMap2_construct_rev_map(
         index: *mut FaissIndexIDMap2,
     ) -> ::std::os::raw::c_int;
@@ -1645,6 +1763,7 @@ extern "C" {
     pub fn faiss_IndexIDMap2_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIDMap2;
 }
 extern "C" {
+    #[doc = " get a pointer to the index map's internal ID vector (the `id_map` field).\n The outputs of this function become invalid after any operation that can\n modify the index.\n\n @param index   opaque pointer to index object\n @param p_id_map    output, the pointer to the beginning of `id_map`.\n @param p_size  output, the current length of `id_map`."]
     pub fn faiss_IndexIDMap2_id_map(
         index: *mut FaissIndexIDMap2,
         p_id_map: *mut *mut idx_t,
@@ -1652,27 +1771,36 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " get a pointer to the sub-index (the `index` field).\n The outputs of this function become invalid after any operation that can\n modify the index.\n\n @param index   opaque pointer to index object"]
     pub fn faiss_IndexIDMap2_sub_index(index: *mut FaissIndexIDMap2) -> *mut FaissIndex;
 }
 pub type FILE = [u64; 19usize];
 extern "C" {
+    #[doc = " Clone an index. This is equivalent to `faiss::clone_index`"]
     pub fn faiss_clone_index(
         arg1: *const FaissIndex,
         p_out: *mut *mut FaissIndex,
     ) -> ::std::os::raw::c_int;
 }
 #[repr(i32)]
+#[doc = " An error code which depends on the exception thrown from the previous\n operation. See `faiss_get_last_error` to retrieve the error message."]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum FaissErrorCode {
+    #[doc = " No error"]
     OK = 0,
+    #[doc = " Any exception other than Faiss or standard C++ library exceptions"]
     UNKNOWN_EXCEPT = -1,
+    #[doc = " Faiss library exception"]
     FAISS_EXCEPT = -2,
+    #[doc = " Standard C++ library exception"]
     STD_EXCEPT = -4,
 }
 extern "C" {
+    #[doc = " Get the error message of the last failed operation performed by Faiss.\n The given pointer is only invalid until another Faiss function is\n called."]
     pub fn faiss_get_last_error() -> *const ::std::os::raw::c_char;
 }
 extern "C" {
+    #[doc = " Build and index with the sequence of processing steps described in\n  the string."]
     pub fn faiss_index_factory(
         p_index: *mut *mut FaissIndex,
         d: ::std::os::raw::c_int,
@@ -1681,15 +1809,18 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Write index to a file.\n This is equivalent to `faiss::write_index` when a file descriptor is\n provided."]
     pub fn faiss_write_index(idx: *const FaissIndex, f: *mut FILE) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Write index to a file.\n This is equivalent to `faiss::write_index` when a file path is provided."]
     pub fn faiss_write_index_fname(
         idx: *const FaissIndex,
         fname: *const ::std::os::raw::c_char,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Read index from a file.\n This is equivalent to `faiss:read_index` when a file descriptor is given."]
     pub fn faiss_read_index(
         f: *mut FILE,
         io_flags: ::std::os::raw::c_int,
@@ -1697,6 +1828,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Read index from a file.\n This is equivalent to `faiss:read_index` when a file path is given."]
     pub fn faiss_read_index_fname(
         fname: *const ::std::os::raw::c_char,
         io_flags: ::std::os::raw::c_int,
@@ -1704,18 +1836,21 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Write index to a file.\n This is equivalent to `faiss::write_index_binary` when a file descriptor is\n provided."]
     pub fn faiss_write_index_binary(
         idx: *const FaissIndexBinary,
         f: *mut FILE,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Write index to a file.\n This is equivalent to `faiss::write_index_binary` when a file path is\n provided."]
     pub fn faiss_write_index_binary_fname(
         idx: *const FaissIndexBinary,
         fname: *const ::std::os::raw::c_char,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Read index from a file.\n This is equivalent to `faiss:read_index_binary` when a file descriptor is\n given."]
     pub fn faiss_read_index_binary(
         f: *mut FILE,
         io_flags: ::std::os::raw::c_int,
@@ -1723,6 +1858,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Read index from a file.\n This is equivalent to `faiss:read_index_binary` when a file path is given."]
     pub fn faiss_read_index_binary_fname(
         fname: *const ::std::os::raw::c_char,
         io_flags: ::std::os::raw::c_int,
@@ -1730,6 +1866,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Compute pairwise distances between sets of vectors"]
     pub fn faiss_pairwise_L2sqr(
         d: i64,
         nq: i64,
@@ -1743,6 +1880,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " Compute pairwise distances between sets of vectors\n arguments from \"faiss_pairwise_L2sqr\"\n ldq equal -1 by default\n ldb equal -1 by default\n ldd equal -1 by default"]
     pub fn faiss_pairwise_L2sqr_with_defaults(
         d: i64,
         nq: i64,
@@ -1753,6 +1891,7 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " compute the inner product between nx vectors x and one y"]
     pub fn faiss_fvec_inner_products_ny(
         ip: *mut f32,
         x: *const f32,
@@ -1762,41 +1901,54 @@ extern "C" {
     );
 }
 extern "C" {
+    #[doc = " compute ny square L2 distance between x and a set of contiguous y vectors"]
     pub fn faiss_fvec_L2sqr_ny(dis: *mut f32, x: *const f32, y: *const f32, d: usize, ny: usize);
 }
 extern "C" {
+    #[doc = " squared norm of a vector"]
     pub fn faiss_fvec_norm_L2sqr(x: *const f32, d: usize) -> f32;
 }
 extern "C" {
+    #[doc = " compute the L2 norms for a set of vectors"]
     pub fn faiss_fvec_norms_L2(norms: *mut f32, x: *const f32, d: usize, nx: usize);
 }
 extern "C" {
+    #[doc = " same as fvec_norms_L2, but computes squared norms"]
     pub fn faiss_fvec_norms_L2sqr(norms: *mut f32, x: *const f32, d: usize, nx: usize);
 }
 extern "C" {
+    #[doc = " L2-renormalize a set of vector. Nothing done if the vector is 0-normed"]
     pub fn faiss_fvec_renorm_L2(d: usize, nx: usize, x: *mut f32);
 }
 extern "C" {
+    #[doc = " Setter of threshold value on nx above which we switch to BLAS to compute\n distances"]
     pub fn faiss_set_distance_compute_blas_threshold(value: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " Getter of threshold value on nx above which we switch to BLAS to compute\n distances"]
     pub fn faiss_get_distance_compute_blas_threshold() -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Setter of block sizes value for BLAS distance computations"]
     pub fn faiss_set_distance_compute_blas_query_bs(value: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " Getter of block sizes value for BLAS distance computations"]
     pub fn faiss_get_distance_compute_blas_query_bs() -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Setter of block sizes value for BLAS distance computations"]
     pub fn faiss_set_distance_compute_blas_database_bs(value: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " Getter of block sizes value for BLAS distance computations"]
     pub fn faiss_get_distance_compute_blas_database_bs() -> ::std::os::raw::c_int;
 }
 extern "C" {
+    #[doc = " Setter of number of results we switch to a reservoir to collect results\n rather than a heap"]
     pub fn faiss_set_distance_compute_min_k_reservoir(value: ::std::os::raw::c_int);
 }
 extern "C" {
+    #[doc = " Getter of number of results we switch to a reservoir to collect results\n rather than a heap"]
     pub fn faiss_get_distance_compute_min_k_reservoir() -> ::std::os::raw::c_int;
 }
