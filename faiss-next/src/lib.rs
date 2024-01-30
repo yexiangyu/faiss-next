@@ -60,10 +60,7 @@ macro_rules! faiss_rc {
                 _ => {
                     let message = sys::faiss_get_last_error();
                     let message = std::ffi::CStr::from_ptr(message);
-                    let message = message
-                        .to_str()
-                        .expect("failed to convert to utf-8")
-                        .to_string();
+                    let message = message.to_str().unwrap_or("unknown error").to_string();
                     Err(Error::Faiss {
                         code: rc as i32,
                         message,
@@ -403,10 +400,7 @@ fn benchmark_faiss_cpu() {
     std::env::set_var("RUST_LOG", "trace");
     let _ = tracing_subscriber::fmt::try_init();
     let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).unwrap();
-    let feats = Array2::random(
-        (1024 * 1024 * 10, 128),
-        rand::distributions::Uniform::new(0., 1.),
-    );
+    let feats = Array2::random((102400, 128), rand::distributions::Uniform::new(0., 1.));
     let query = feats.slice(s![42..43, ..]);
     index.add(feats.as_slice_memory_order().unwrap()).unwrap();
     let times = 10;
@@ -436,13 +430,10 @@ fn benchmark_faiss_gpu() {
     std::env::set_var("RUST_LOG", "trace");
     let _ = tracing_subscriber::fmt::try_init();
     let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).unwrap();
-    let feats = Array2::random(
-        (1024 * 1024 * 10, 128),
-        rand::distributions::Uniform::new(0., 1.),
-    );
+    let feats = Array2::random((102400, 128), rand::distributions::Uniform::new(0., 1.));
     let query = feats.slice(s![42..43, ..]);
     index.add(feats.as_slice_memory_order().unwrap()).unwrap();
-    let index = index.into_gpu(7).expect("failed to move index to gpu");
+    let index = index.into_gpu(0).expect("failed to move index to gpu");
     let times = 10;
     let mut ds = vec![];
     for _ in 0..times {

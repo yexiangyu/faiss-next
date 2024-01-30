@@ -10,6 +10,7 @@ fn main() {
     // linking faiss libraries
     println!("cargo:rustc-link-lib=faiss_c");
     println!("cargo:rustc-link-lib=faiss");
+    println!("cargo:rustc-link-search=c:\\tools\\faiss\\lib");
 
     // generate bindings for faiss
     #[cfg(feature = "bindgen")]
@@ -49,7 +50,9 @@ fn main() {
             // need a windows machine to generate the code
             #[cfg(target_os = "windows")]
             {
-                todo!()
+                builder = builder.clang_arg(
+                    "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8\\include",
+                );
             }
         }
 
@@ -78,7 +81,7 @@ fn main() {
 
         // add faiss link dir if env detected
         if let Some(dir) = get_faiss_lib_dir() {
-            println!("cargo:rustc-link-search=native={}", dir);
+            println!("cargo:rustc-link-search={}", dir);
         }
 
         // generate bindings
