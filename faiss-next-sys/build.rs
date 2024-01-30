@@ -13,6 +13,28 @@ fn main() {
     println!("cargo:rustc-link-lib=static=faiss_c");
     println!("cargo:rustc-link-lib=static=faiss");
 
+    #[cfg(target_os = "linux")]
+    {
+        println!("cargo:rustc-link-search=/opt/intel/oneapi/mkl/latest/lib");
+        println!("cargo:rustc-link-search=/opt/intel/oneapi/mpi/latest/lib");
+        println!("cargo:rustc-link-search=/opt/intel/oneapi/compiler/latest/lib");
+        println!("cargo:rustc-link-search=/usr/lib/gcc/x86_64-linux-gnu/11");
+        println!("cargo:rustc-link-lib=static=stdc++");
+        println!("cargo:rustc-link-lib=static=gomp");
+        println!("cargo:rustc-link-lib=static=mkl_core");
+        println!("cargo:rustc-link-lib=static=mkl_intel_ilp64");
+        println!("cargo:rustc-link-lib=static=mkl_gnu_thread");
+        println!("cargo:rustc-link-lib=static=mpi");
+        println!("cargo:rustc-link-lib=static=mkl_blacs_intelmpi_ilp64");
+        #[cfg(feature = "gpu")]
+        {
+            println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
+            println!("cargo:rustc-link-lib=static=cudart_static");
+            println!("cargo:rustc-link-lib=static=cublas_static");
+            println!("cargo:rustc-link-lib=static=cublasLt_static");
+        }
+    }
+
     cfg_if! {
         if #[cfg(feature = "system")]
         {
