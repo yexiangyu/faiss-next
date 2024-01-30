@@ -88,7 +88,32 @@ fn faiss_cmake_windows() {
 }
 
 fn faiss_cmake_linux() {
-    todo!()
+    let mut builder = Config::new("faiss");
+
+    builder
+        .define("FAISS_ENABLE_PYTHON", "OFF")
+        .define("FAISS_ENABLE_C_API", "ON")
+        .define("BUILD_TESTING", "OFF");
+
+    cfg_if! {
+        if #[cfg(feature = "gpu")]
+        {
+            builder.define("FAISS_ENABLE_GPU", "ON");
+        }
+        else
+        {
+            builder.define("FAISS_ENABLE_GPU", "OFF");
+        }
+    }
+
+    let dst = builder.build();
+
+    let c_api = dst.join("build").join("c_api").join("libfaiss_c.a");
+
+    std::fs::copy(c_api, dst.join("lib").join("libfaiss_c.a"))
+        .expect("failed to copy libfaiss_c.a");
+
+    println!("cargo:rustc-link-search={}", dst.join("lib").display());
 }
 
 fn faiss_bindgen() {
@@ -140,5 +165,20 @@ fn faiss_bindgen() {
 
 fn get_cuda_include_dir() -> String {
     let mut inc_dir = "".to_string();
-    todo!()
+
+    cfg_if! {
+        if #[cfg(target_os = "linux")]
+        {
+            inc_dir = "/usr/local/cuda/targets/x86_64-linux/include/".to_string();
+        }
+        else
+        {
+        }
+    }
+
+    if inc_dir.is_empty() {
+        panic!("could not find cuda include dir");
+    }
+
+    inc_dir
 }
