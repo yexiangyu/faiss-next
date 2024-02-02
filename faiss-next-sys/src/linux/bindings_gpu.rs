@@ -114,7 +114,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    #[doc = " query n vectors of dimension d with search parameters to the index.\n\n return at most k vectors. If there are not enough results for a query,\n the result is padded with -1s.\n\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param params      input params to modify how search is done\n @param labels      output labels of the NNs, size n*k\n @param distances   output pairwise distances, size n*k"]
+    #[doc = " query n vectors of dimension d with seach parameters to the index.\n\n return at most k vectors. If there are not enough results for a query,\n the result is padded with -1s.\n\n @param index       opaque pointer to index object\n @param x           input vectors to search, size n * d\n @param params      input params to modify how search is done\n @param labels      output labels of the NNs, size n*k\n @param distances   output pairwise distances, size n*k"]
     pub fn faiss_Index_search_with_params(
         index: *const FaissIndex,
         n: idx_t,
@@ -1181,14 +1181,6 @@ extern "C" {
         invlist: *mut idx_t,
     );
 }
-extern "C" {
-    pub fn faiss_IndexIVF_train_encoder(
-        index: *mut FaissIndexIVF,
-        n: idx_t,
-        x: *const f32,
-        assign: *const idx_t,
-    ) -> ::std::os::raw::c_int;
-}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct FaissIndexIVFStats {
@@ -1649,6 +1641,13 @@ extern "C" {
         x: *const f32,
         xids: *const idx_t,
         precomputed_idx: *const idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_train_residual(
+        index: *mut FaissIndexIVFScalarQuantizer,
+        n: idx_t,
+        x: *const f32,
     ) -> ::std::os::raw::c_int;
 }
 pub type FaissIndexShards = FaissIndex_H;
