@@ -4,6 +4,8 @@
 
 `Windows`, `Linux` and `Macos` is supported. `facebookresearch/faiss` `v1.7.4` is wrapped currently.
 
+***WARN***: test case won't give the correct result on `windows` with `gpu` enabled on a `nvidia 1050` laptop with `cuda11.8`, don't know why yet, might be a problem of hecked source code? 
+
 `faiss-next` requires `faiss` compiled with `FAISS_ENABLE_C_API=ON` and `BUILD_SHARED_LIBS=ON` in advance. Please checkout [`README.md`](https://github.com/yexiangyu/faiss-next/blob/main/faiss-next-sys/README.md) of `faiss-next-sys` for further info about building `faiss` from source.
 
 ## Installation
