@@ -1,31 +1,62 @@
 # faiss-next
 
-[faiss-next](https://github.com/yexiangyu/faiss-next/blob/main/faiss-next/README.md): rust wrapper for [facebookresearch/faiss](https://github.com/facebookresearch/faiss), inspired by [Enet4/faiss-rs](https://github.com/Enet4/faiss-rs)
+`faiss-next` is a simple rust bindings for [facebookresearch/faiss](https://github.com/facebookresearch/faiss). This crate is is inspired by [Enet4/faiss-rs](https://github.com/Enet4/faiss-rs).
 
-`faiss-next` support `windows`, `linux` and `macos`. 
+`Windows`, `Linux` and `Macos` is supported.
 
-[facebookresearch/faiss](https://github.com/facebookresearch/faiss) `v1.7.4` is currently wrapped. 
+Currently `facebookresearch/faiss` `v1.7.4` is wrapped.
 
-# Installation
+## Installation
 
-`faiss-next` requires `faiss` compiled with `FAISS_ENABLE_C_API=ON` and `BUILD_SHARED_LIBS=ON` in advance. [facebookresearch/faiss](https://github.com/facebookresearch/faiss) provides [document](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md) about how to build it from source, a quick howto about buiding `faiss` from source is at the end.
+`faiss-next` requires `faiss` compiled with `FAISS_ENABLE_C_API=ON` and `BUILD_SHARED_LIBS=ON` in advance. [facebookresearch/faiss](https://github.com/facebookresearch/faiss) provides [document](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md) about how to build it from source. A short guide is provided at the end of `README.md`
 
 put `faiss-next` in your `Cargo.toml` file
 
 ```toml
 [dependencies]
-faiss-next = "*"
+faiss-next = {version = "*", features = ["gpu"] }
 ```
-when linking against `faiss-next`, env variable `FAISS_DIR` need to specified, if `faiss` is not installed in standard dir like `/usr` or `/usr/local`. `build.rs` from `faiss-next-sys` will search `faiss` folder under current user's `home` directory for `faiss` installation by default.
 
-# Features
+When linking against `faiss-next`, env variable `FAISS_DIR` will point to the dir `faiss` installed.  If `FAISS_DIR` is not set,  `build.rs` will search `/usr` or `/usr/local` or `$HOME/faiss` for library and include heeders by default. 
 
-- `bindgen`: re-generate `ffi` bindings for `faiss.h`, only `faiss` version updated in future.
-- `gpu`: enable support with `faiss` is compiled with `cuda` supported.
+## Tutorial
 
-The bindings is already created, if re-created required. please enable `feature`: `bindgen`.
+```rust
+use faiss_next::*;
 
-# Build `faiss` from source
+use ndarray::{s, Array2};
+use ndarray_rand::*;
+
+
+fn main() {
+
+	//create index
+	let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).expect("failed to create cpu index");
+
+	//create some random feature
+	let feats = Array2::random((1024, 128), rand::distributions::Uniform::new(0., 1.));
+
+	//get query from position 42
+	let query = feats.slice(s![42..43, ..]);
+
+	//add features in index
+	index.add(feats.as_slice_memory_order().unwrap()).expect("failed to add feature");
+
+	//do the search
+	let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
+	assert_eq!(ret.labels[0], 42i64);
+
+	//move index from cpu to gpu, only available when gpu feature is enabled
+	#[cfg(feature = "gpu")]
+	{
+		let index = index.into_gpu(0).expect("failed to move index to gpu");
+		let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
+		assert_eq!(ret.labels[0], 42i64);
+	}
+}
+```
+
+## Build `faiss` from source
 
 `faiss-next` requires `faiss` compiled with `FAISS_ENABLE_C_API=ON` and `BUILD_SHARED_LIBS=ON` in advance. [facebookresearch/faiss](https://github.com/facebookresearch/faiss) provides [document](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md) about how to build it from source, here is a quick howto about buiding `faiss` from source.
 
@@ -33,7 +64,7 @@ On `windows`, build will fail because `msvc` c++ compiler compatable [issue](htt
 
 Download the [zip](https://github.com/yexiangyu/faiss/archive/refs/heads/v1.7.4-win.zip), unzip then unzip it.
 
-## `MacOS`
+### `MacOS`
 `xcode` and [`brew`](https://brew.sh) needed, install in advance.
  ```shell
  # install cmake openblas and llvm
@@ -50,7 +81,7 @@ Download the [zip](https://github.com/yexiangyu/faiss/archive/refs/heads/v1.7.4-
  cp build/c_api/libfaiss_c.dylib $HOME/faiss/lib/
 ```
 
-## `Linux`
+### `Linux`
 
 `gcc`, `cmake`, [`intelmkl`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html), `cuda` needed, install in advance.
 
@@ -65,7 +96,7 @@ cmake -B build -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE
  cmake --install build --prefix=$HOME/faiss
  cp build/c_api/libfaiss_c.so $HOME/faiss/lib/
 ```
-## `Windows`
+### `Windows`
 `Visual Studio 2022`, `cmake`, [`intelmkl`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html), `cuda` needed, install in advance.
 
 ```shell
