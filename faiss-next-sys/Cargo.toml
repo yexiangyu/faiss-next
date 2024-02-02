@@ -15,11 +15,8 @@ keywords = ["faiss"]
 default = []
 gpu = []
 bindgen = []
-system = []
 
 [build-dependencies]
 bindgen = "0.69.2"
-cmake = "0.1.50"
-cfg-if = "1.0.0"
 
 [dependencies]

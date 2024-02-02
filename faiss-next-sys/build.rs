@@ -1,141 +1,64 @@
-#![allow(unused)]
-
-use cmake::Config;
-use std::{
-    env::{set_var, var},
-    path::PathBuf,
-};
-
 use bindgen::Builder;
-use cfg_if::cfg_if;
+use std::{env::var, path::PathBuf};
 
 fn main() {
-    println!("cargo:rustc-link-lib=static=faiss_c");
-    println!("cargo:rustc-link-lib=static=faiss");
-
-    #[cfg(target_os = "linux")]
-    {
-        println!("cargo:rustc-link-search=/opt/intel/oneapi/mkl/latest/lib");
-        println!("cargo:rustc-link-search=/opt/intel/oneapi/mpi/latest/lib");
-        println!("cargo:rustc-link-search=/opt/intel/oneapi/compiler/latest/lib");
-        println!("cargo:rustc-link-search=/usr/lib/gcc/x86_64-linux-gnu/11");
-        println!("cargo:rustc-link-lib=static=stdc++");
-        println!("cargo:rustc-link-lib=static=gomp");
-        println!("cargo:rustc-link-lib=static=mkl_core");
-        println!("cargo:rustc-link-lib=static=mkl_intel_ilp64");
-        println!("cargo:rustc-link-lib=static=mkl_gnu_thread");
-        println!("cargo:rustc-link-lib=static=mpi");
-        println!("cargo:rustc-link-lib=static=mkl_blacs_intelmpi_ilp64");
-        #[cfg(feature = "gpu")]
-        {
-            println!("cargo:rustc-link-search=/usr/local/cuda/lib64");
-            println!("cargo:rustc-link-lib=static=cudart_static");
-            println!("cargo:rustc-link-lib=static=cublas_static");
-            println!("cargo:rustc-link-lib=static=cublasLt_static");
-        }
+    // ignore build when detect run docs build on docs.rs
+    if var("DOCS_RS").is_ok() {
+        return;
     }
 
-    cfg_if! {
-        if #[cfg(feature = "system")]
-        {
-            faiss_system_setup();
-        }
-        else
-        {
-            #[cfg(target_os = "macos")]
-            {
-                faiss_cmake_macos();
-            }
-
-            #[cfg(target_os = "linux")]
-            {
-                faiss_cmake_linux();
-            }
-
-            #[cfg(target_os = "windows")]
-            {
-                faiss_cmake_windows();
-            }
-        }
-
-
-    }
-
-    #[cfg(feature = "bindgen")]
-    {
-        faiss_bindgen();
-    }
-}
-
-fn faiss_system_setup() {
+    // get faiss dir
     println!("cargo:rerun-if-env-changed=FAISS_DIR");
+    let faiss_dir = faiss_dir();
 
-    let mut dir = var("FAISS_DIR").ok();
+    //bindgen
+    if cfg!(feature = "bindgen") {
+        faiss_bindgen()
+    }
 
-    #[cfg(target_os = "windows")]
-    {
-        if dir.is_none() {
-            set_var("FAISS_DIR", "c:\\tools\\faiss");
-            dir = Some("c:\\tools\\faiss".to_string());
+    if let Some(faiss_dir) = &faiss_dir {
+        println!(
+            "cargo:rustc-link-search={}",
+            faiss_dir.join("lib").display()
+        );
+    }
+
+    println!("cargo:rustc-link-lib=faiss_c");
+    println!("cargo:rustc-link-lib=faiss");
+}
+
+fn faiss_dir() -> Option<PathBuf> {
+    if let Ok(faiss_dir) = var("FAISS_DIR") {
+        return Some(PathBuf::from(faiss_dir));
+    }
+
+    if cfg!(target_family = "unix") {
+        if let Ok(home) = var("HOME") {
+            let home = PathBuf::from(home);
+            let faiss_dir = home.join("faiss");
+            if faiss_dir.is_dir()
+                && faiss_dir.exists()
+                && faiss_dir.join("lib").exists()
+                && faiss_dir.join("include").exists()
+            {
+                return Some(faiss_dir);
+            }
+        }
+    } else if cfg!(target_family = "windows") {
+        if let Ok(home) = var("USERPROFILE") {
+            let home = PathBuf::from(home);
+            let faiss_dir = home.join("faiss");
+            if faiss_dir.is_dir()
+                && faiss_dir.exists()
+                && faiss_dir.join("lib").exists()
+                && faiss_dir.join("include").exists()
+            {
+                return Some(faiss_dir);
+            }
         }
     }
 
-    if let Some(dir) = dir {
-        let dir = PathBuf::from(dir);
-        println!("cargo:rustc-link-search={}", dir.join("lib").display());
-    }
-}
-
-fn faiss_cmake_macos() {
-    let dst = Config::new("faiss")
-        .define("CMAKE_C_COMPILER", "/opt/homebrew/opt/llvm/bin/clang")
-        .define("CMAKE_ASM_COMPILER", "/opt/homebrew/opt/llvm/bin/clang")
-        .define("CMAKE_CXX_COMPILER", "/opt/homebrew/opt/llvm/bin/clang++")
-        .define("FAISS_ENABLE_GPU", "OFF")
-        .define("FAISS_ENABLE_PYTHON", "OFF")
-        .define("FAISS_ENABLE_C_API", "ON")
-        .define("BUILD_TESTING", "OFF")
-        .build();
-
-    let c_api = dst.join("build").join("c_api").join("libfaiss_c.a");
-
-    std::fs::copy(c_api, dst.join("lib").join("libfaiss_c.a"))
-        .expect("failed to copy libfaiss_c.a");
-
-    println!("cargo:rustc-link-search={}", dst.join("lib").display());
-}
-
-fn faiss_cmake_windows() {
-    todo!()
-}
-
-fn faiss_cmake_linux() {
-    let mut builder = Config::new("faiss");
-
-    builder
-        .define("FAISS_ENABLE_PYTHON", "OFF")
-        .define("FAISS_ENABLE_C_API", "ON")
-        .define("BUILD_TESTING", "OFF");
-
-    cfg_if! {
-        if #[cfg(feature = "gpu")]
-        {
-            builder.define("FAISS_ENABLE_GPU", "ON");
-        }
-        else
-        {
-            builder.define("FAISS_ENABLE_GPU", "OFF");
-        }
-    }
-
-    let dst = builder.build();
-
-    let c_api = dst.join("build").join("c_api").join("libfaiss_c.a");
-
-    std::fs::copy(c_api, dst.join("lib").join("libfaiss_c.a"))
-        .expect("failed to copy libfaiss_c.a");
-
-    println!("cargo:rustc-link-search={}", dst.join("lib").display());
+    None
 }
 
 fn faiss_bindgen() {
@@ -152,26 +75,18 @@ fn faiss_bindgen() {
         .opaque_type("FILE")
         .wrap_unsafe_ops(true);
 
-    #[cfg(feature = "system")]
-    {
-        if let Ok(faiss_dir) = var("FAISS_DIR") {
-            builder = builder.clang_arg(format!("-I{}/include", faiss_dir));
-        }
-    }
-
-    #[cfg(not(feature = "system"))]
-    {
-        builder = builder.clang_arg(format!("-I./"));
+    if let Some(faiss_dir) = faiss_dir() {
+        builder = builder.clang_arg(format!("-I{}", faiss_dir.join("include").display()));
     }
 
     let os_name = var("CARGO_CFG_TARGET_OS").expect("no in cargo");
     let output_dir = PathBuf::from("src").join(os_name);
+
     std::fs::create_dir_all(&output_dir).expect("failed to create output_dir");
 
     let mut output = output_dir.join("bindings.rs");
 
-    #[cfg(feature = "gpu")]
-    {
+    if cfg!(feature = "gpu") {
         output = output_dir.join("bindings_gpu.rs");
         builder = builder
             .clang_arg("-DFAISS_USE_GPU")
@@ -188,14 +103,11 @@ fn faiss_bindgen() {
 fn get_cuda_include_dir() -> String {
     let mut inc_dir = "".to_string();
 
-    cfg_if! {
-        if #[cfg(target_os = "linux")]
-        {
-            inc_dir = "/usr/local/cuda/targets/x86_64-linux/include/".to_string();
-        }
-        else
-        {
-        }
+    if cfg!(target_os = "linux") {
+        inc_dir = "/usr/local/cuda/include/".to_string();
+    } else if cfg!(target_os = "windows") {
+        let cuda_path = var("CUDA_PATH").expect("failed to find cuda path");
+        inc_dir = format!("{}", PathBuf::from(cuda_path).join("include").display());
     }
 
     if inc_dir.is_empty() {

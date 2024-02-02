@@ -14,6 +14,7 @@ keywords = ["faiss"]
 [features]
 default = []
 gpu = ["faiss-next-sys/gpu"]
+bindgen = ["faiss-next-sys/bindgen"]
 
 [dependencies]
 faiss-next-sys = { path = "../faiss-next-sys", version = "0.1.1" }
