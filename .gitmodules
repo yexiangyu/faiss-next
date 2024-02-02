@@ -1,3 +1,0 @@
-[submodule "faiss-next-sys/faiss"]
-	path = faiss-next-sys/faiss
-	url = https://github.com/yexiangyu/faiss
