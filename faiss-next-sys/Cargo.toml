@@ -2,7 +2,7 @@
 name = "faiss-next-sys"
 version = "0.2.0"
 edition = "2021"
-license = "MIT License"
+license = "MIT"
 description = "Light weighted rust wrapper of c api of facebookresearch/faiss library"
 homepage = "http://github.com/yexiangyu/faiss-next"
 documentation = "https://docs.rs/faiss-next"
