@@ -49,24 +49,30 @@ pub enum Error {
     #[error("faiss error,code={},message={}", .code, .message)]
     Faiss { code: i32, message: String },
 }
+
 pub type Result<T> = std::result::Result<T, Error>;
+
+impl From<i32> for Error {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => unimplemented!(),
+            _ => {
+                let message = unsafe { std::ffi::CStr::from_ptr(sys::faiss_get_last_error()) };
+                let message = message.to_str().unwrap_or("unknown error").to_string();
+                Error::Faiss {
+                    code: value,
+                    message,
+                }
+            }
+        }
+    }
+}
 
 macro_rules! faiss_rc {
     ($blk: block) => {
-        unsafe {
-            let rc = { $blk };
-            match rc {
-                0 => Ok(()),
-                _ => {
-                    let message = sys::faiss_get_last_error();
-                    let message = std::ffi::CStr::from_ptr(message);
-                    let message = message.to_str().unwrap_or("unknown error").to_string();
-                    Err(Error::Faiss {
-                        code: rc as i32,
-                        message,
-                    })
-                }
-            }
+        match unsafe { $blk } {
+            0 => Ok(()),
+            rc @ _ => Err(Error::from(rc)),
         }
     };
 }
@@ -80,15 +86,20 @@ pub struct SearchResult {
     pub distances: Vec<f32>,
 }
 
-/// Index trait, all index should implement this trait
-pub trait Index {
+/// Trait that can return inner pointer of index
+pub trait IndexInner {
     /// return inner pointer
     fn inner(&self) -> *mut sys::FaissIndex;
+}
 
+/// Index trait, all index should implement this trait
+pub trait Index: IndexInner {
     /// add vectors to index, x.len() should be a multiple of d
     fn add<T: AsRef<[f32]> + ?Sized>(&mut self, x: &T) -> Result<()> {
         let x = x.as_ref();
-        faiss_rc! {{sys::faiss_Index_add(self.inner(), (x.len() / self.d())as sys::idx_t, x.as_ptr())}}?;
+        faiss_rc!({
+            sys::faiss_Index_add(self.inner(), (x.len() / self.d()) as sys::idx_t, x.as_ptr())
+        })?;
         trace!("add: index={:?}, x.len={}", self.inner(), x.as_ref().len());
         Ok(())
     }
@@ -127,7 +138,12 @@ pub trait Index {
         unsafe { sys::faiss_Index_d(self.inner()) as usize }
     }
 
-    /// train index when some index impl is used, `is_trained` is todo
+    // return whether index is trained
+    fn is_trained(&self) -> bool {
+        unsafe { sys::faiss_Index_is_trained(self.inner()) != 0 }
+    }
+
+    /// train index when some index impl is used
     fn train<T: AsRef<[f32]> + ?Sized>(&mut self, x: &T) -> Result<()> {
         let x = x.as_ref();
         let n = (x.len() / self.d()) as sys::idx_t;
@@ -169,6 +185,7 @@ pub struct IDSelector {
 
 impl IDSelector {
     /// create a selector from batch ids
+    /// TODO: more id selector
     pub fn batch(ids: &[i64]) -> Result<Self> {
         let mut inner = null_mut();
         faiss_rc!({
@@ -209,11 +226,13 @@ impl Drop for CpuIndex {
     }
 }
 
-impl Index for CpuIndex {
+impl IndexInner for CpuIndex {
     fn inner(&self) -> *mut sys::FaissIndex {
         self.inner
     }
 }
+
+impl Index for CpuIndex {}
 
 impl CpuIndex {
     /// create multi gpu index, `devices` is a list of gpu device id, `split` means split index on multiple gpu or not
@@ -347,11 +366,9 @@ pub mod gpu {
         }
     }
 
-    impl Index for GpuIndex {
-        fn inner(&self) -> *mut sys::FaissIndex {
-            self.inner as *mut _
-        }
-    }
+    impl IndexInner for GpuIndex {}
+
+    impl Index for GpuIndex {}
 
     impl GpuIndex {
         pub fn to_cpu(&self) -> super::Result<super::CpuIndex> {

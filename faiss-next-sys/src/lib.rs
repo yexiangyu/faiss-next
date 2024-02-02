@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![allow(non_camel_case_types)]
 
 #[cfg(all(not(feature = "gpu"), target_os = "macos"))]
