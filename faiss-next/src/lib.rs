@@ -1,36 +1,5 @@
-//! # Faiss
-//!
-//! `faiss` is a light weight rust wrapper for [facebookresearch/faiss](https://github.com/facebookresearch/faiss) c api. Quick example:
-//!
-//! ```rust
-//! use faiss_next::{index_factory, FaissMetricType, Index};
-//! use ndarray::{s, Array2};
-//! use ndarray_rand::*;
-//!
-//! //create index
-//! let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).expect("failed to create cpu index");
-//!
-//! //create some random feature
-//! let feats = Array2::random((1024, 128), rand::distributions::Uniform::new(0., 1.));
-//!
-//! //get query from position 42
-//! let query = feats.slice(s![42..43, ..]);
-//!
-//! //add features in index
-//! index.add(feats.as_slice_memory_order().unwrap()).expect("failed to add feature");
-//!
-//! //do the search
-//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
-//! assert_eq!(ret.labels[0], 42i64);
-//!
-//! //move index from cpu to gpu, only available when gpu feature is enabled
-//! #[cfg(feature = "gpu")]
-//! {
-//! let index = index.into_gpu(0).expect("failed to move index to gpu");
-//! let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
-//! assert_eq!(ret.labels[0], 42i64);
-//! }
-//! ```
+#![doc = include_str!("../README.md")]
+
 use faiss_next_sys as sys;
 use std::ffi::CString;
 use std::ptr::{addr_of_mut, null_mut};
@@ -50,29 +19,29 @@ pub enum Error {
     Faiss { code: i32, message: String },
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
-
-impl From<i32> for Error {
-    fn from(value: i32) -> Self {
-        match value {
+impl Error {
+    pub fn from_rc(rc: i32) -> Self {
+        match rc {
             0 => unimplemented!(),
             _ => {
                 let message = unsafe { std::ffi::CStr::from_ptr(sys::faiss_get_last_error()) };
-                let message = message.to_str().unwrap_or("unknown error").to_string();
-                Error::Faiss {
-                    code: value,
-                    message,
-                }
+                let message = message
+                    .to_str()
+                    .unwrap_or("unknown error, failed to decode error message from bytes")
+                    .to_string();
+                Error::Faiss { code: rc, message }
             }
         }
     }
 }
 
+pub type Result<T> = std::result::Result<T, Error>;
+
 macro_rules! faiss_rc {
     ($blk: block) => {
         match unsafe { $blk } {
             0 => Ok(()),
-            rc @ _ => Err(Error::from(rc)),
+            rc @ _ => Err(Error::from_rc(rc)),
         }
     };
 }
@@ -237,14 +206,14 @@ impl Index for CpuIndex {}
 impl CpuIndex {
     /// create multi gpu index, `devices` is a list of gpu device id, `split` means split index on multiple gpu or not
     #[cfg(feature = "gpu")]
-    pub fn to_multi_gpu(&self, devices: &[i32], split: bool) -> Result<gpu::GpuIndex> {
+    pub fn to_multi_gpu(&self, devices: &[i32], shard: bool) -> Result<gpu::GpuIndex> {
         let mut p_out = 0 as *mut _;
         let providers = (0..devices.len())
             .map(|_| -> Result<_> { gpu::GpuResourcesProvider::new() })
             .collect::<Result<Vec<_>>>()?;
         let mut options = 0 as *mut sys::FaissGpuClonerOptions;
         faiss_rc!({ sys::faiss_GpuClonerOptions_new(addr_of_mut!(options)) })?;
-        if split {
+        if shard {
             unsafe { sys::faiss_GpuMultipleClonerOptions_set_shard(options, 1) };
         }
         let providers_ = providers.iter().map(|p| p.inner).collect::<Vec<_>>();
@@ -260,8 +229,6 @@ impl CpuIndex {
             )
         })?;
         Ok(gpu::GpuIndex {
-            splitted: split,
-            devices: devices.to_vec(),
             inner: p_out,
             providers: providers,
         })
@@ -269,8 +236,8 @@ impl CpuIndex {
 
     /// create multi gpu index, `devices` is a list of gpu device id, `split` means split index on multiple gpu or not, cpu index will be dropped
     #[cfg(feature = "gpu")]
-    pub fn into_multi_gpu(self, devices: &[i32], split: bool) -> Result<gpu::GpuIndex> {
-        self.to_multi_gpu(devices, split)
+    pub fn into_multi_gpu(self, devices: &[i32], shard: bool) -> Result<gpu::GpuIndex> {
+        self.to_multi_gpu(devices, shard)
     }
 
     /// create gpu index, `device` is gpu device id
@@ -289,9 +256,7 @@ impl CpuIndex {
             device
         );
         Ok(gpu::GpuIndex {
-            splitted: false,
             inner: p_out,
-            devices: vec![device],
             providers: vec![provider],
         })
     }
@@ -329,15 +294,11 @@ pub fn index_factory(d: i32, description: &str, metric: FaissMetricType) -> Resu
 ///  gpu related module
 #[cfg(feature = "gpu")]
 pub mod gpu {
-    use super::{addr_of_mut, null_mut, sys, Error, Index};
+    use super::{addr_of_mut, null_mut, sys, Error, Index, IndexInner};
     use tracing::trace;
 
     /// gpu index
     pub struct GpuIndex {
-        /// - index is splitted on multiple gpu or not
-        pub splitted: bool,
-        /// - gpu device used by index
-        pub devices: Vec<i32>,
         /// - gpu resource provider of faiss
         pub providers: Vec<GpuResourcesProvider>,
         /// - raw pointer
@@ -366,7 +327,11 @@ pub mod gpu {
         }
     }
 
-    impl IndexInner for GpuIndex {}
+    impl IndexInner for GpuIndex {
+        fn inner(&self) -> *mut sys::FaissIndex {
+            self.inner
+        }
+    }
 
     impl Index for GpuIndex {}
 
@@ -390,78 +355,4 @@ pub mod gpu {
             }
         }
     }
-
-    impl Clone for GpuIndex {
-        /// to clone gpu index, we need to clone index to cpu index first, then move this gpu index to  gpu index, kinds of stupid.
-        fn clone(&self) -> Self {
-            let cpu = self
-                .to_cpu()
-                .expect("failed to create cpu index from gpu index");
-            let gpu = match self.splitted {
-                true => cpu.into_gpu(self.devices[0]),
-                false => cpu.into_multi_gpu(&self.devices, self.splitted),
-            };
-            gpu.expect("failed to create gpu index from cpu index")
-        }
-    }
-}
-
-#[cfg(test)]
-#[test]
-fn benchmark_faiss_cpu() {
-    use std::time::Duration;
-
-    use ndarray::{s, Array2};
-    use ndarray_rand::*;
-    use tracing::*;
-    std::env::set_var("RUST_LOG", "trace");
-    let _ = tracing_subscriber::fmt::try_init();
-    let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).unwrap();
-    let feats = Array2::random((102400, 128), rand::distributions::Uniform::new(0., 1.));
-    let query = feats.slice(s![42..43, ..]);
-    index.add(feats.as_slice_memory_order().unwrap()).unwrap();
-    let times = 10;
-    let mut ds = vec![];
-    for _ in 0..times {
-        let tm = Instant::now();
-        let ret = index
-            .search(query.as_slice_memory_order().unwrap(), 1)
-            .unwrap();
-        let d = tm.elapsed();
-        ds.push(d);
-        debug!(?ret, ?d);
-    }
-    let d: Duration = ds.into_iter().sum();
-    info!("duration={:?}, times={}", d / times, times);
-}
-
-#[cfg(test)]
-#[cfg(feature = "gpu")]
-#[test]
-fn benchmark_faiss_gpu() {
-    use std::time::Duration;
-
-    use ndarray::{s, Array2};
-    use ndarray_rand::*;
-    use tracing::*;
-    std::env::set_var("RUST_LOG", "trace");
-    let _ = tracing_subscriber::fmt::try_init();
-    let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).unwrap();
-    let feats = Array2::random((102400, 128), rand::distributions::Uniform::new(0., 1.));
-    let query = feats.slice(s![42..43, ..]);
-    index.add(feats.as_slice_memory_order().unwrap()).unwrap();
-    let index = index.into_gpu(0).expect("failed to move index to gpu");
-    let times = 10;
-    let mut ds = vec![];
-    for _ in 0..times {
-        let tm = Instant::now();
-        let ret = index
-            .search(query.as_slice_memory_order().unwrap(), 1)
-            .unwrap();
-        let d = tm.elapsed();
-        ds.push(d);
-        debug!(?ret, ?d);
-    }
-    let d: Duration = ds.into_iter().sum();
-    info!("duration={:?}, times={}", d / times, times);
 }

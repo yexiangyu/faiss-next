@@ -6,9 +6,12 @@
 
 Currently `facebookresearch/faiss` `v1.7.4` is wrapped.
 
+`faiss-next` requires `faiss` compiled with `FAISS_ENABLE_C_API=ON` and `BUILD_SHARED_LIBS=ON` in advance. 
+
+Please checkout `README.md` of `faiss-next-sys` for further info of building `faiss` from source.
+
 ## Installation
 
-`faiss-next` requires `faiss` compiled with `FAISS_ENABLE_C_API=ON` and `BUILD_SHARED_LIBS=ON` in advance. [facebookresearch/faiss](https://github.com/facebookresearch/faiss) provides [document](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md) about how to build it from source. A short guide is provided at the end of `README.md`
 
 put `faiss-next` in your `Cargo.toml` file
 
