@@ -56,6 +56,15 @@ fn faiss_dir() -> Option<PathBuf> {
                 return Some(faiss_dir);
             }
         }
+
+        let tool = PathBuf::from("c:\\tools\\faiss");
+        if tool.exists()
+            && tool.is_dir()
+            && tool.join("lib").exists()
+            && tool.join("include").exists()
+        {
+            return Some(tool);
+        }
     }
 
     None
