@@ -21,7 +21,7 @@ faiss-next = {version = "*", features = ["gpu"] }
 ## Tutorial
 
 ```rust
-use faiss_next::*;
+use faiss_next::prelude::*;
 
 use ndarray::{s, Array2};
 use ndarray_rand::*;
@@ -29,28 +29,30 @@ use ndarray_rand::*;
 
 fn main() {
 
-	//create index
-	let mut index = index_factory(128, "Flat", FaissMetricType::METRIC_L2).expect("failed to create cpu index");
+	let mut builder = FaissIndex::builder().with_dimension(128).with_description("IDMap,Flat");
+
+	#[cfg(feature = "gpu")]
+	{
+		builder = builder.with_gpu(0);
+	}
+
+	let mut index = builder.build().expect("failed to build index");
 
 	//create some random feature
 	let feats = Array2::random((1024, 128), rand::distributions::Uniform::new(0., 1.));
+
+	//create ids
+	let ids  = (0i64..1024).collect::<Vec<_>>();
 
 	//get query from position 42
 	let query = feats.slice(s![42..43, ..]);
 
 	//add features in index
-	index.add(feats.as_slice_memory_order().unwrap()).expect("failed to add feature");
+	index.add_with_ids(feats.as_slice_memory_order().unwrap(), ids).expect("failed to add feature");
 
 	//do the search
 	let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
 	assert_eq!(ret.labels[0], 42i64);
 
-	//move index from cpu to gpu, only available when gpu feature is enabled
-	#[cfg(feature = "gpu")]
-	{
-		let index = index.into_gpu(0).expect("failed to move index to gpu");
-		let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
-		assert_eq!(ret.labels[0], 42i64);
-	}
 }
 ```

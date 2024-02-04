@@ -3,8 +3,6 @@
 use faiss_next_sys as sys;
 use std::ffi::CString;
 use std::ptr::{addr_of_mut, null_mut};
-use std::time::Instant;
-use tracing::trace;
 
 /// ## Metric Type
 /// please refer to <https://github.com/facebookresearch/faiss/wiki/MetricType-and-distances>
@@ -13,6 +11,16 @@ pub use sys::FaissMetricType;
 /// Error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("invalid index description {0}")]
+    InvalidDescription(String),
+    #[error("invalid index dimension")]
+    InvalidDimension,
+    #[error("gpu {0} not available")]
+    GpuNotAvailable(i32),
+    #[error("index already on gpu")]
+    IndexOnGpu,
+    #[error("index already on cpu")]
+    IndexOnCpu,
     #[error("{0}")]
     NulErr(#[from] std::ffi::NulError),
     #[error("faiss error,code={},message={}", .code, .message)]
@@ -37,11 +45,12 @@ impl Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[macro_export]
 macro_rules! faiss_rc {
     ($blk: block) => {
         match unsafe { $blk } {
             0 => Ok(()),
-            rc @ _ => Err(Error::from_rc(rc)),
+            rc @ _ => Err($crate::Error::from_rc(rc)),
         }
     };
 }
@@ -64,12 +73,26 @@ pub trait IndexInner {
 /// Index trait, all index should implement this trait
 pub trait Index: IndexInner {
     /// add vectors to index, x.len() should be a multiple of d
-    fn add<T: AsRef<[f32]> + ?Sized>(&mut self, x: &T) -> Result<()> {
+    fn add(&mut self, x: impl AsRef<[f32]>) -> Result<()> {
         let x = x.as_ref();
         faiss_rc!({
             sys::faiss_Index_add(self.inner(), (x.len() / self.d()) as sys::idx_t, x.as_ptr())
         })?;
-        trace!("add: index={:?}, x.len={}", self.inner(), x.as_ref().len());
+        Ok(())
+    }
+
+    /// add vectors to index, x.len() should be a multiple of d, with ids
+    fn add_with_ids(&mut self, x: impl AsRef<[f32]>, ids: impl AsRef<[i64]>) -> Result<()> {
+        let x = x.as_ref();
+        let ids = ids.as_ref();
+        faiss_rc!({
+            sys::faiss_Index_add_with_ids(
+                self.inner(),
+                (x.len() / self.d()) as sys::idx_t,
+                x.as_ptr(),
+                ids.as_ptr(),
+            )
+        })?;
         Ok(())
     }
 
@@ -79,7 +102,6 @@ pub trait Index: IndexInner {
         let n = (x.len() / self.d()) as sys::idx_t;
         let mut labels = vec![0 as sys::idx_t; n as usize * k];
         let mut distances = vec![0.0f32; n as usize * k];
-        let tm = Instant::now();
         faiss_rc!({
             {
                 sys::faiss_Index_search(
@@ -92,13 +114,6 @@ pub trait Index: IndexInner {
                 )
             }
         })?;
-        trace!(
-            "search index d={}, n={}, k={}, tm={:?}",
-            self.d(),
-            n,
-            k,
-            tm.elapsed()
-        );
         Ok(SearchResult { labels, distances })
     }
 
@@ -134,16 +149,20 @@ pub trait Index: IndexInner {
         let pth = pth.as_ref();
         let pth = CString::new(pth)?;
         faiss_rc!({ sys::faiss_write_index_fname(self.inner() as *const _, pth.as_ptr()) })?;
-        todo!()
+        Ok(())
     }
 
     /// load index from disk
-    fn load<P: AsRef<str>>(pth: P) -> Result<CpuIndex> {
+    fn load<P: AsRef<str>>(pth: P) -> Result<FaissIndex> {
         let pth = pth.as_ref();
         let pth = CString::new(pth)?;
         let mut inner = null_mut();
         faiss_rc!({ sys::faiss_read_index_fname(pth.as_ptr(), 0, addr_of_mut!(inner)) })?;
-        Ok(CpuIndex { inner })
+        Ok(FaissIndex {
+            inner,
+            #[cfg(feature = "gpu")]
+            gpu_resources: None,
+        })
     }
 }
 
@@ -172,187 +191,286 @@ impl Drop for IDSelector {
     }
 }
 
-/// Index use cpu
-/// # Examples
-/// ``` rust
-/// use faiss_next as faiss;
-/// use faiss::Index;
-/// let mut index = faiss::index_factory(128, "Flat", faiss::FaissMetricType::METRIC_L2).expect("failed to create index");
-/// index.add(&vec![0.0;128 * 128]).expect("failed to add feature");
-/// let ret = index.search(&vec![0.0;128], 1).expect("failed to search");
-/// ```
-#[derive(Debug)]
-pub struct CpuIndex {
-    pub inner: *mut sys::FaissIndex,
+pub struct FaissIndex {
+    inner: *mut sys::FaissIndex,
+    #[cfg(feature = "gpu")]
+    #[allow(unused)]
+    gpu_resources: Option<Vec<gpu::FaissGpuResourcesProvider>>,
 }
 
-impl Drop for CpuIndex {
-    fn drop(&mut self) {
-        unsafe {
-            sys::faiss_Index_free(self.inner);
-        }
-        trace!("drop: index={:?}", self.inner);
-    }
-}
-
-impl IndexInner for CpuIndex {
+impl IndexInner for FaissIndex {
     fn inner(&self) -> *mut sys::FaissIndex {
         self.inner
     }
 }
 
-impl Index for CpuIndex {}
+impl Index for FaissIndex {}
 
-impl CpuIndex {
-    /// create multi gpu index, `devices` is a list of gpu device id, `split` means split index on multiple gpu or not
-    #[cfg(feature = "gpu")]
-    pub fn to_multi_gpu(&self, devices: &[i32], shard: bool) -> Result<gpu::GpuIndex> {
-        let mut p_out = 0 as *mut _;
-        let providers = (0..devices.len())
-            .map(|_| -> Result<_> { gpu::GpuResourcesProvider::new() })
-            .collect::<Result<Vec<_>>>()?;
-        let mut options = 0 as *mut sys::FaissGpuClonerOptions;
-        faiss_rc!({ sys::faiss_GpuClonerOptions_new(addr_of_mut!(options)) })?;
-        if shard {
-            unsafe { sys::faiss_GpuMultipleClonerOptions_set_shard(options, 1) };
+impl FaissIndex {
+    pub fn builder() -> FaissIndexBuilder {
+        Default::default()
+    }
+}
+
+impl Drop for FaissIndex {
+    fn drop(&mut self) {
+        unsafe {
+            sys::faiss_Index_free(self.inner);
         }
-        let providers_ = providers.iter().map(|p| p.inner).collect::<Vec<_>>();
+    }
+}
+
+#[derive(smart_default::SmartDefault)]
+pub struct FaissIndexBuilder {
+    description: String,
+    dimension: u32,
+    #[default(FaissMetricType::METRIC_L2)]
+    metric: FaissMetricType,
+    #[cfg(feature = "gpu")]
+    devices: Option<Vec<i32>>,
+    #[cfg(feature = "gpu")]
+    sharding: bool,
+}
+
+impl FaissIndexBuilder {
+    pub fn with_description(mut self, description: impl ToString) -> Self {
+        self.description = description.to_string();
+        self
+    }
+
+    pub fn with_dimension(mut self, dimension: u32) -> Self {
+        self.dimension = dimension;
+        self
+    }
+    pub fn with_metric(mut self, metric: FaissMetricType) -> Self {
+        self.metric = metric;
+        self
+    }
+    #[cfg(feature = "gpu")]
+    pub fn with_gpus(mut self, devices: &[i32]) -> Self {
+        self.devices = Some(devices.to_vec());
+        self
+    }
+
+    #[cfg(feature = "gpu")]
+    pub fn with_gpu(mut self, device: i32) -> Self {
+        self.devices = Some(vec![device]);
+        self
+    }
+
+    #[cfg(feature = "gpu")]
+    pub fn with_sharding(mut self, sharding: bool) -> Self {
+        self.sharding = sharding;
+        self
+    }
+
+    pub fn build(self) -> Result<FaissIndex> {
+        let mut inner = null_mut();
+        let description = CString::new(self.description)?;
         faiss_rc!({
-            sys::faiss_index_cpu_to_gpu_multiple_with_options(
-                providers_.as_ptr(),
-                providers.len(),
-                devices.as_ptr(),
-                devices.len(),
-                self.inner,
-                options,
-                addr_of_mut!(p_out),
+            sys::faiss_index_factory(
+                addr_of_mut!(inner),
+                self.dimension as i32,
+                description.as_ptr(),
+                self.metric,
             )
         })?;
-        Ok(gpu::GpuIndex {
-            inner: p_out,
-            providers: providers,
-        })
-    }
 
-    /// create multi gpu index, `devices` is a list of gpu device id, `split` means split index on multiple gpu or not, cpu index will be dropped
-    #[cfg(feature = "gpu")]
-    pub fn into_multi_gpu(self, devices: &[i32], shard: bool) -> Result<gpu::GpuIndex> {
-        self.to_multi_gpu(devices, shard)
-    }
+        #[allow(unused_mut)]
+        let mut index = FaissIndex {
+            inner,
+            #[cfg(feature = "gpu")]
+            gpu_resources: None,
+        };
 
-    /// create gpu index, `device` is gpu device id
-    #[cfg(feature = "gpu")]
-    pub fn to_gpu(&self, device: i32) -> Result<gpu::GpuIndex> {
-        let mut p_out = 0 as *mut _;
-        let provider = gpu::GpuResourcesProvider::new()?;
-        trace!(?provider, "create gpu provider");
-        faiss_rc!({
-            sys::faiss_index_cpu_to_gpu(provider.inner, device, self.inner, addr_of_mut!(p_out))
-        })?;
-        trace!(
-            "into_gpu: from {:?} to index={:?}, device={}",
-            self.inner,
-            p_out,
-            device
-        );
-        Ok(gpu::GpuIndex {
-            inner: p_out,
-            providers: vec![provider],
-        })
-    }
+        #[cfg(feature = "gpu")]
+        {
+            use gpu::GpuIndex;
 
-    /// create gpu index, `device` is gpu device id, cpu index will be dropped
-    #[cfg(feature = "gpu")]
-    pub fn into_gpu(self, device: i32) -> Result<gpu::GpuIndex> {
-        self.to_gpu(device)
+            if let Some(devices) = self.devices {
+                if !devices.is_empty() {
+                    if devices.len() == 1 {
+                        index = index.into_gpu(devices[0])?;
+                    } else {
+                        index = index.into_gpus(&devices, self.sharding)?;
+                    }
+                }
+            }
+        }
+
+        Ok(index)
     }
 }
 
-impl Clone for CpuIndex {
-    fn clone(&self) -> Self {
-        let mut inner = null_mut();
-        faiss_rc!({ sys::faiss_clone_index(self.inner, addr_of_mut!(inner)) })
-            .unwrap_or_else(|_| panic!("failed to clone index with inner={:?}", self.inner));
-        Self { inner }
-    }
-}
-
-/// helper function to create cpu index, please refer to [doc](https://github.com/facebookresearch/faiss/wiki/The-index-factory) for details of `description` and `metric`
-pub fn index_factory(d: i32, description: &str, metric: FaissMetricType) -> Result<CpuIndex> {
-    let mut p_index = null_mut();
-    let description_ = CString::new(description)?;
-    faiss_rc! {{sys::faiss_index_factory(addr_of_mut!(p_index), d, description_.as_ptr(), metric)}}?;
-    trace!(
-        "index_factory: create index={:?}, description={}, metric={:?}",
-        p_index,
-        description,
-        metric
-    );
-    Ok(CpuIndex { inner: p_index })
-}
-
-///  gpu related module
 #[cfg(feature = "gpu")]
 pub mod gpu {
-    use super::{addr_of_mut, null_mut, sys, Error, Index, IndexInner};
-    use tracing::trace;
+    use std::ptr::{addr_of_mut, null_mut};
 
-    /// gpu index
-    pub struct GpuIndex {
-        /// - gpu resource provider of faiss
-        pub providers: Vec<GpuResourcesProvider>,
-        /// - raw pointer
-        pub inner: *mut sys::FaissGpuIndex,
+    use super::{sys, FaissIndex, Result};
+
+    pub struct FaissGpuResourcesProvider {
+        inner: *mut sys::FaissGpuResourcesProvider,
     }
 
-    /// gpu resource provider
-    #[derive(Debug)]
-    pub struct GpuResourcesProvider {
-        pub inner: *mut sys::FaissGpuResourcesProvider,
-    }
-
-    impl GpuResourcesProvider {
-        pub fn new() -> super::Result<Self> {
-            let mut inner = null_mut();
+    impl FaissGpuResourcesProvider {
+        pub fn new() -> Result<Self> {
+            let mut inner = std::ptr::null_mut();
             faiss_rc!({ sys::faiss_StandardGpuResources_new(addr_of_mut!(inner)) })?;
-            trace!(?inner, "create gpu provider");
             Ok(Self { inner })
         }
     }
 
-    impl Drop for GpuResourcesProvider {
+    impl Drop for FaissGpuResourcesProvider {
         fn drop(&mut self) {
             unsafe { sys::faiss_GpuResourcesProvider_free(self.inner) }
-            trace!("drop: gpu provider={:?}", self.inner);
         }
     }
 
-    impl IndexInner for GpuIndex {
-        fn inner(&self) -> *mut sys::FaissIndex {
-            self.inner
-        }
+    fn gpu_num() -> Result<i32> {
+        let mut r = 0;
+        faiss_rc!({ sys::faiss_get_num_gpus(addr_of_mut!(r)) })?;
+        Ok(r)
     }
 
-    impl Index for GpuIndex {}
+    pub trait GpuIndex {
+        fn to_gpu(&self, device: i32) -> Result<FaissIndex>;
+        fn into_gpu(self, device: i32) -> Result<FaissIndex>;
 
-    impl GpuIndex {
-        pub fn to_cpu(&self) -> super::Result<super::CpuIndex> {
+        fn to_gpus(&self, devices: &[i32], sharding: bool) -> Result<FaissIndex>;
+        fn into_gpus(self, devices: &[i32], sharding: bool) -> Result<FaissIndex>;
+
+        fn to_cpu(&self) -> Result<FaissIndex>;
+        fn into_cpu(self) -> Result<FaissIndex>;
+    }
+
+    impl GpuIndex for super::FaissIndex {
+        fn to_gpu(&self, device: i32) -> Result<FaissIndex> {
+            let gpu_num = gpu_num()?;
+
+            if device >= gpu_num || device < 0 {
+                return Err(super::Error::GpuNotAvailable(device));
+            }
+
+            let Self {
+                inner: inner_rhs,
+                gpu_resources,
+            } = self;
+
+            if gpu_resources.is_some() {
+                return Err(super::Error::IndexOnGpu);
+            }
+
+            let gpu_resources = FaissGpuResourcesProvider::new()?;
+
             let mut inner = null_mut();
-            faiss_rc!({ sys::faiss_index_gpu_to_cpu(self.inner, addr_of_mut!(inner)) })?;
-            Ok(super::CpuIndex { inner })
+
+            faiss_rc!({
+                sys::faiss_index_cpu_to_gpu(
+                    gpu_resources.inner,
+                    device,
+                    *inner_rhs,
+                    addr_of_mut!(inner),
+                )
+            })?;
+
+            Ok(Self {
+                inner,
+                gpu_resources: Some(vec![gpu_resources]),
+            })
         }
 
-        pub fn into_cpu(self) -> super::Result<super::CpuIndex> {
+        fn into_gpu(self, device: i32) -> Result<FaissIndex> {
+            self.to_gpu(device)
+        }
+
+        fn to_gpus(&self, devices: &[i32], sharding: bool) -> Result<FaissIndex> {
+            let Self {
+                inner: inner_rhs,
+                gpu_resources,
+            } = self;
+
+            if gpu_resources.is_some() {
+                return Err(super::Error::IndexOnGpu);
+            }
+
+            let gpu_num = gpu_num()?;
+
+            devices
+                .iter()
+                .map(|device| match *device >= 0 && *device < gpu_num {
+                    true => Ok(()),
+                    false => Err(super::Error::GpuNotAvailable(*device)),
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            let providers = (0..devices.len())
+                .map(|_| -> Result<_> { FaissGpuResourcesProvider::new() })
+                .collect::<Result<Vec<_>>>()?;
+
+            let mut options = 0 as *mut sys::FaissGpuClonerOptions;
+
+            faiss_rc!({ sys::faiss_GpuClonerOptions_new(addr_of_mut!(options)) })?;
+
+            if sharding {
+                unsafe { sys::faiss_GpuMultipleClonerOptions_set_shard(options, 1) };
+            }
+
+            let providers_ = providers.iter().map(|p| p.inner).collect::<Vec<_>>();
+
+            let mut inner = null_mut();
+
+            faiss_rc!({
+                sys::faiss_index_cpu_to_gpu_multiple_with_options(
+                    providers_.as_ptr(),
+                    providers.len(),
+                    devices.as_ptr(),
+                    devices.len(),
+                    *inner_rhs,
+                    options,
+                    addr_of_mut!(inner),
+                )
+            })?;
+
+            unsafe { sys::faiss_GpuClonerOptions_free(options) }
+
+            Ok(Self {
+                inner,
+                gpu_resources: Some(providers),
+            })
+        }
+
+        fn into_gpus(self, devices: &[i32], sharding: bool) -> Result<FaissIndex> {
+            self.to_gpus(devices, sharding)
+        }
+
+        fn to_cpu(&self) -> Result<FaissIndex> {
+            let Self {
+                inner: inner_rhs,
+                gpu_resources,
+            } = self;
+
+            if gpu_resources.is_none() {
+                return Err(super::Error::IndexOnCpu);
+            }
+
+            let mut inner = null_mut();
+
+            faiss_rc!({ sys::faiss_index_gpu_to_cpu(*inner_rhs, addr_of_mut!(inner)) })?;
+
+            Ok(Self {
+                inner,
+                gpu_resources: None,
+            })
+        }
+
+        fn into_cpu(self) -> Result<FaissIndex> {
             self.to_cpu()
         }
     }
+}
 
-    impl Drop for GpuIndex {
-        fn drop(&mut self) {
-            unsafe {
-                sys::faiss_Index_free(self.inner);
-                trace!("drop: index={:?}", self.inner);
-            }
-        }
-    }
+pub mod prelude {
+    #[cfg(feature = "gpu")]
+    pub use super::gpu::GpuIndex;
+    pub use super::{FaissIndex, FaissMetricType, Index, IndexInner};
 }
