@@ -54,5 +54,20 @@ fn main() {
 	let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
 	assert_eq!(ret.labels[0], 42i64);
 
+
+	#[cfg(not(feature = "gpu"))]
+	{
+		//do delete feature
+		let id_sel = IDSelector::batch([42]).expect("failed to create id selector");
+
+		index.remove_ids(id_sel).expect("failed to remove feature from index");
+
+		//do the search
+		let ret = index.search(query.as_slice_memory_order().unwrap(), 1).expect("failed to search");
+		assert_ne!(ret.labels[0], 42i64);
+	}
+
 }
 ```
+
+## Clustering

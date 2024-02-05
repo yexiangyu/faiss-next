@@ -105,7 +105,7 @@ fn faiss_bindgen() {
     builder
         .generate()
         .expect("unable to generate bindings")
-        .write_to_file(&mut output)
+        .write_to_file(output)
         .expect("unable to write bindings");
 }
 
