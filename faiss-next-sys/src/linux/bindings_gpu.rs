@@ -15,6 +15,7 @@ pub struct FaissIDSelector_H {
 }
 pub type FaissIDSelector = FaissIDSelector_H;
 #[repr(u32)]
+#[non_exhaustive]
 #[doc = " Some algorithms support both an inner product version and a L2 search\n version."]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum FaissMetricType {
@@ -302,7 +303,7 @@ extern "C" {
 }
 #[doc = " Class for the clustering parameters. Can be passed to the\n constructor of the Clustering object."]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct FaissClusteringParameters {
     #[doc = "< clustering iterations"]
     pub niter: ::std::os::raw::c_int,
@@ -932,6 +933,15 @@ pub struct FaissBuffer {
     pub ids: *mut idx_t,
     pub dis: *mut f32,
 }
+impl Default for FaissBuffer {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
 extern "C" {
     pub fn faiss_BufferList_append_buffer(bl: *mut FaissBufferList) -> ::std::os::raw::c_int;
 }
@@ -1182,7 +1192,7 @@ extern "C" {
     );
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct FaissIndexIVFStats {
     pub nq: usize,
     pub nlist: usize,
@@ -1532,6 +1542,7 @@ extern "C" {
     ) -> *mut FaissIndex;
 }
 #[repr(u32)]
+#[non_exhaustive]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum FaissQuantizerType {
     #[doc = "< 8 bits per component"]
@@ -1782,6 +1793,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 #[repr(i32)]
+#[non_exhaustive]
 #[doc = " An error code which depends on the exception thrown from the previous\n operation. See `faiss_get_last_error` to retrieve the error message."]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum FaissErrorCode {
@@ -1981,6 +1993,7 @@ extern "C" {
     pub fn faiss_gpu_sync_all_devices() -> ::std::os::raw::c_int;
 }
 #[repr(u32)]
+#[non_exhaustive]
 #[doc = " How user vector index data is stored on the GPU"]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum FaissIndicesOptions {
