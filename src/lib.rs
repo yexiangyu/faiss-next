@@ -1,4 +1,3 @@
-pub mod autotune;
 pub mod cluster;
 pub mod error;
 pub mod index;

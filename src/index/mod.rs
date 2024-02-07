@@ -1,3 +1,5 @@
+use std::ptr::null_mut;
+
 use faiss_next_sys as sys;
 pub mod factory;
 pub mod flat;
@@ -103,6 +105,16 @@ pub trait Index: IndexPtr {
         }
         (labels, distances)
     }
+
+    fn range_search(&mut self, x: impl AsRef<[f32]>, radius: f32) -> Result<()> {
+        let x = x.as_ref();
+        let n = x.len() as i64 / self.d();
+        let result = FaissRangeSearchResult::new(n)?;
+        faiss_rc!({
+            sys::faiss_Index_range_search(self.mut_ptr(), n, x.as_ptr(), radius, result.inner)
+        })?;
+        Ok(())
+    }
 }
 
 pub struct FaissSearchParameters {
@@ -112,5 +124,36 @@ pub struct FaissSearchParameters {
 impl Drop for FaissSearchParameters {
     fn drop(&mut self) {
         unsafe { sys::faiss_SearchParameters_free(self.inner) }
+    }
+}
+
+pub struct FaissRangeSearchResult {
+    inner: *mut sys::FaissRangeSearchResult,
+}
+
+impl FaissRangeSearchResult {
+    pub fn new(nq: i64) -> Result<Self> {
+        let mut inner = null_mut();
+        faiss_rc!({ sys::faiss_RangeSearchResult_new(&mut inner, nq) })?;
+        Ok(Self { inner })
+    }
+
+    pub fn new_with(nq: i64, alloc_lims: i32) -> Result<Self> {
+        let mut inner = null_mut();
+        faiss_rc!({ sys::faiss_RangeSearchResult_new_with(&mut inner, nq, alloc_lims) })?;
+        Ok(Self { inner })
+    }
+
+    pub fn do_allocation(&mut self) -> Result<()> {
+        faiss_rc!({ sys::faiss_RangeSearchResult_do_allocation(self.inner) })?;
+        Ok(())
+    }
+
+    pub fn buffer_size(&self) -> usize {
+        unsafe { sys::faiss_RangeSearchResult_buffer_size(self.inner) }
+    }
+
+    pub fn nq(&self) -> usize {
+        unsafe { sys::faiss_RangeSearchResult_nq(self.inner) }
     }
 }
