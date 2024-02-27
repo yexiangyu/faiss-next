@@ -35,32 +35,6 @@ impl DerefMut for FaissClusteringParameters {
     }
 }
 
-pub struct ClusteringIterationStats {
-    inner: *mut sys::FaissClusteringIterationStats,
-}
-
-impl ClusteringIterationStats {
-    pub fn obj(&self) -> f32 {
-        unsafe { sys::faiss_ClusteringIterationStats_obj(self.inner) }
-    }
-
-    pub fn time(&self) -> f64 {
-        unsafe { sys::faiss_ClusteringIterationStats_time(self.inner) }
-    }
-
-    pub fn time_search(&self) -> f64 {
-        unsafe { sys::faiss_ClusteringIterationStats_time_search(self.inner) }
-    }
-
-    pub fn imbalance_factor(&self) -> f64 {
-        unsafe { sys::faiss_ClusteringIterationStats_imbalance_factor(self.inner) }
-    }
-
-    pub fn nsplit(&self) -> i32 {
-        unsafe { sys::faiss_ClusteringIterationStats_nsplit(self.inner) }
-    }
-}
-
 pub struct FaissClustering {
     inner: *mut sys::FaissClustering,
 }
@@ -144,5 +118,31 @@ impl FaissClustering {
         // let n = len / self.d();
         let data = unsafe { std::slice::from_raw_parts(ptr, len) };
         data.chunks(self.d()).collect()
+    }
+}
+
+pub struct ClusteringIterationStats {
+    inner: *mut sys::FaissClusteringIterationStats,
+}
+
+impl ClusteringIterationStats {
+    pub fn obj(&self) -> f32 {
+        unsafe { sys::faiss_ClusteringIterationStats_obj(self.inner) }
+    }
+
+    pub fn time(&self) -> f64 {
+        unsafe { sys::faiss_ClusteringIterationStats_time(self.inner) }
+    }
+
+    pub fn time_search(&self) -> f64 {
+        unsafe { sys::faiss_ClusteringIterationStats_time_search(self.inner) }
+    }
+
+    pub fn imbalance_factor(&self) -> f64 {
+        unsafe { sys::faiss_ClusteringIterationStats_imbalance_factor(self.inner) }
+    }
+
+    pub fn nsplit(&self) -> i32 {
+        unsafe { sys::faiss_ClusteringIterationStats_nsplit(self.inner) }
     }
 }

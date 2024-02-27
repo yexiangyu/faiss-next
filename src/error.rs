@@ -2,6 +2,10 @@ use faiss_next_sys as sys;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("invalid parameter spance name")]
+    InvalidParameterSpaceName,
+    #[error("invalid parameter range name")]
+    InvalidParameterRangeName,
     #[error("failed to cast type")]
     CastFailed,
     #[error("invalid description")]
@@ -17,8 +21,9 @@ impl Error {
         let msg = unsafe {
             let c_str = sys::faiss_get_last_error();
             let msg = std::ffi::CStr::from_ptr(c_str)
-                .to_string_lossy()
-                .into_owned();
+                .to_str()
+                .unwrap_or("unknown error with utf-8 decode failure")
+                .to_string();
             msg
         };
         Error::Fassis { code, msg }

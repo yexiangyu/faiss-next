@@ -67,6 +67,10 @@ fn do_link() {
 
     println!("cargo:rustc-link-lib=faiss_c");
     println!("cargo:rustc-link-lib=faiss");
+    if cfg!(target_os = "linux") {
+        println!("cargo:rustc-link-search=/opt/intel/oneapi/mkl/latest/lib",);
+        println!("cargo:rustc-link-lib=mkl_rt");
+    }
 }
 
 fn faiss_dir() -> Option<PathBuf> {
