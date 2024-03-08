@@ -3,18 +3,16 @@ use std::env::var;
 use std::path::PathBuf;
 
 fn main() {
-    // If the DOC_RS environment variable is set, don't build or link anything.
+    // ignore build when generating docs.rs.
     if var("DOC_RS").is_ok() {
         return;
     }
 
-    // generate bindgen code if the bindgen feature is enabled
     if cfg!(feature = "bindgen") {
         do_bindgen();
         return;
     }
 
-    // do link against faiss library
     do_link();
 }
 

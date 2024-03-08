@@ -7,10 +7,10 @@ edition = "2021"
 
 [features]
 default = []
-gpu = []
 bindgen = []
 
-[build-dependencies]
-bindgen = "0.69.2"
-
 [dependencies]
+
+
+[build-dependencies]
+bindgen = "0.69.4"

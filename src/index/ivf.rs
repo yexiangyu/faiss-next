@@ -1,234 +1,250 @@
-use super::{Index, IndexPtr};
-use crate::id_selector::IDSelector;
-use crate::macros::faiss_rc;
-use crate::{error::Result, macros::define_index_impl};
-use faiss_next_sys as sys;
 use std::marker::PhantomData;
 use std::ptr::null_mut;
 
-use super::{
-    ivf_flat::{FaissQuantizer, FaissQuantizerType},
-    SearchParameters, SearchParametersPtr,
-};
+use crate::error::{Error, Result};
+use crate::rc;
+use faiss_next_sys as sys;
 
-pub struct FaissSearchParametersIVF<'a> {
+use super::common::{impl_index_drop, impl_index_trait, FaissIndexTrait};
+use super::id_selector::FaissIDSelectorTrait;
+use super::parameters::FaissSearchParametersTrait;
+
+pub struct FaissSearchParametersIVF {
     inner: *mut sys::FaissSearchParametersIVF,
-    selector: std::marker::PhantomData<&'a dyn IDSelector>,
 }
 
-impl SearchParametersPtr for FaissSearchParametersIVF<'_> {
-    fn ptr(&self) -> *const sys::FaissSearchParameters {
-        self.inner
-    }
-
-    fn mut_ptr(&mut self) -> *mut sys::FaissSearchParameters {
-        self.inner
-    }
-
-    fn into_ptr(self) -> *mut sys::FaissSearchParameters {
-        todo!()
-    }
-}
-
-impl SearchParameters for FaissSearchParametersIVF<'_> {}
-
-pub struct ConstFaissIDSelector {
-    inner: *const sys::FaissIDSelector,
-}
-
-impl IDSelector for ConstFaissIDSelector {
-    fn ptr(&self) -> *const sys::FaissIDSelector {
-        self.inner
-    }
-
-    fn mut_ptr(&mut self) -> *mut sys::FaissIDSelector {
-        todo!()
-    }
-}
-
-impl FaissSearchParametersIVF<'_> {
-    pub fn new() -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc!({ sys::faiss_SearchParametersIVF_new(&mut inner) })?;
-        Ok(Self {
-            inner,
-            selector: PhantomData,
-        })
-    }
-
-    pub fn new_with(sel: &mut impl IDSelector, nprobe: usize, max_codes: usize) -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc!({
-            sys::faiss_SearchParametersIVF_new_with(&mut inner, sel.mut_ptr(), nprobe, max_codes)
-        })?;
-        Ok(Self {
-            inner,
-            selector: PhantomData,
-        })
-    }
-
-    pub fn nprobe(&self) -> usize {
-        unsafe { sys::faiss_SearchParametersIVF_nprobe(self.ptr()) }
-    }
-
-    pub fn sel(&self) -> ConstFaissIDSelector {
-        let inner = unsafe { sys::faiss_SearchParametersIVF_sel(self.ptr()) };
-        ConstFaissIDSelector { inner }
-    }
-
-    pub fn max_codes(&self) -> usize {
-        unsafe { sys::faiss_SearchParametersIVF_max_codes(self.ptr()) }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(i32)]
-pub enum FaissIndexIVFSubsetType {
-    Range = 0,
-    Mod = 1,
-    InvertList = 2,
-}
-
-define_index_impl!(FaissIndexIVF, faiss_IndexIVF_free);
-
-impl FaissIndexIVF {
-    pub fn downcast(index: impl Index) -> Result<Self> {
-        let inner = index.into_ptr();
-        let inner = unsafe { sys::faiss_IndexIVF_cast(inner) };
-        if inner.is_null() {
-            return Err(crate::error::Error::CastFailed);
+impl Drop for FaissSearchParametersIVF {
+    fn drop(&mut self) {
+        if !self.inner.is_null() {
+            unsafe { sys::faiss_SearchParametersIVF_free(self.inner) }
         }
+    }
+}
+
+impl FaissSearchParametersTrait for FaissSearchParametersIVF {
+    fn inner(&self) -> *mut sys::FaissSearchParameters {
+        self.inner
+    }
+
+    fn into_inner(self) -> *mut sys::FaissSearchParameters {
+        let mut s = self;
+        let inner = s.inner;
+        s.inner = null_mut();
+        inner
+    }
+}
+
+pub struct FaissIDSelectorBorrowed<'a> {
+    inner: *const sys::FaissIDSelector,
+    marker: PhantomData<&'a FaissSearchParametersIVF>,
+}
+
+impl FaissIDSelectorTrait for FaissIDSelectorBorrowed<'_> {
+    fn is_member(&self, id: i64) -> bool {
+        unsafe { sys::faiss_IDSelector_is_member(self.inner(), id) != 0 }
+    }
+
+    fn not(self) -> Result<super::id_selector::FaissIDSelectorNot>
+    where
+        Self: Sized + 'static,
+    {
+        unimplemented!()
+    }
+
+    fn and(
+        self,
+        _rhs: impl FaissIDSelectorTrait + 'static,
+    ) -> Result<super::id_selector::FaissIDSelectorAnd>
+    where
+        Self: Sized + 'static,
+    {
+        unimplemented!()
+    }
+
+    fn or(
+        self,
+        _rhs: impl FaissIDSelectorTrait + 'static,
+    ) -> Result<super::id_selector::FaissIDSelectorOr>
+    where
+        Self: Sized + 'static,
+    {
+        unimplemented!()
+    }
+
+    fn inner(&self) -> *mut sys::FaissIDSelector {
+        self.inner as *mut _
+    }
+}
+
+impl FaissSearchParametersIVF {
+    pub fn new() -> Result<Self> {
+        let mut inner = std::ptr::null_mut();
+        rc!({ sys::faiss_SearchParametersIVF_new(&mut inner) })?;
         Ok(Self { inner })
     }
 
-    pub fn nlist(&self) -> usize {
-        unsafe { sys::faiss_IndexIVF_nlist(self.ptr()) }
+    pub fn new_with(
+        id_selector: impl FaissIDSelectorTrait,
+        nprobe: usize,
+        max_codes: usize,
+    ) -> Result<Self> {
+        let mut inner = std::ptr::null_mut();
+        rc!({
+            sys::faiss_SearchParametersIVF_new_with(
+                &mut inner,
+                id_selector.inner(),
+                nprobe,
+                max_codes,
+            )
+        })?;
+        Ok(Self { inner })
     }
 
     pub fn nprobe(&self) -> usize {
-        unsafe { sys::faiss_IndexIVF_nprobe(self.ptr()) }
+        unsafe { sys::faiss_SearchParametersIVF_nprobe(self.inner) }
     }
 
-    pub fn quantizer(&self) -> FaissQuantizer {
-        let inner = unsafe { sys::faiss_IndexIVF_quantizer(self.ptr()) };
-        FaissQuantizer {
+    pub fn max_codes(&self) -> usize {
+        unsafe { sys::faiss_SearchParametersIVF_max_codes(self.inner) }
+    }
+
+    pub fn sel(&self) -> FaissIDSelectorBorrowed<'_> {
+        let inner = unsafe { sys::faiss_SearchParametersIVF_sel(self.inner) };
+        FaissIDSelectorBorrowed {
             inner,
-            index: PhantomData,
+            marker: PhantomData,
+        }
+    }
+}
+
+pub trait FaissIndexIVFTrait: FaissIndexTrait {
+    fn nlist(&self) -> usize {
+        unsafe { sys::faiss_IndexIVF_nlist(self.inner()) }
+    }
+
+    fn nprobe(&self) -> usize {
+        unsafe { sys::faiss_IndexIVF_nprobe(self.inner()) }
+    }
+
+    fn set_nprobe(&mut self, nprobe: usize) {
+        unsafe { sys::faiss_IndexIVF_set_nprobe(self.inner(), nprobe) }
+    }
+
+    fn quantizer(&self) -> FaissIndexIVFQuantizer<Self>
+    where
+        Self: Sized,
+    {
+        let inner = unsafe { sys::faiss_IndexIVF_quantizer(self.inner()) };
+        FaissIndexIVFQuantizer {
+            inner,
+            marker: PhantomData,
         }
     }
 
-    pub fn quantizer_trains_alone(&self) -> FaissQuantizerType {
-        match unsafe { sys::faiss_IndexIVF_quantizer_trains_alone(self.ptr()) } {
-            0 => FaissQuantizerType::UseQuantizerAsIndex,
-            1 => FaissQuantizerType::PassTrainingSet,
-            2 => FaissQuantizerType::TrainingOnIndex,
-            _ => unimplemented!(),
-        }
-    }
-    //TODO: wtf?
-    pub fn own_fields(&self) -> bool {
-        unsafe { sys::faiss_IndexIVF_own_fields(self.ptr()) != 0 }
+    fn quantizer_trains_alone(&self) -> i8 {
+        unsafe { sys::faiss_IndexIVF_quantizer_trains_alone(self.inner()) }
     }
 
-    //TODO: wtf?
-    pub fn set_own_fields(&mut self, own_fields: bool) {
-        unsafe { sys::faiss_IndexIVF_set_own_fields(self.mut_ptr(), own_fields as i32) }
-    }
-
-    pub fn merge_from(&mut self, other: &mut FaissIndexIVF, add_id: i64) -> Result<()> {
-        faiss_rc!({ sys::faiss_IndexIVF_merge_from(self.mut_ptr(), other.mut_ptr(), add_id) })?;
+    fn merge_from(&mut self, rhs: impl FaissIndexIVFTrait, add_id: i64) -> Result<()> {
+        rc!({ sys::faiss_IndexIVF_merge_from(self.inner(), rhs.inner(), add_id) })?;
         Ok(())
     }
 
-    pub fn copy_subset_to(
+    fn copy_subset_to(
         &self,
-        index: &mut FaissIndexIVF,
-        subset_type: FaissIndexIVFSubsetType,
+        rhs: &mut impl FaissIndexIVFTrait,
+        subset_type: i32,
         a1: i64,
         a2: i64,
     ) -> Result<()> {
-        faiss_rc!({
-            sys::faiss_IndexIVF_copy_subset_to(
-                self.ptr(),
-                index.mut_ptr(),
-                subset_type as i32,
-                a1,
-                a2,
-            )
+        rc!({
+            sys::faiss_IndexIVF_copy_subset_to(self.inner(), rhs.inner(), subset_type, a1, a2)
         })?;
         Ok(())
     }
 
-    // TODO: wtf?
-    #[allow(clippy::too_many_arguments)]
-    pub fn search_preassigned(
-        &mut self,
-        x: impl AsRef<[f32]>,
-        k: i64,
-        assign: impl AsRef<[i64]>,
-        centroiid_dis: impl AsRef<[f32]>,
-        mut distances: impl AsMut<[f32]>,
-        mut labels: impl AsMut<[i64]>,
-        store_pairs: bool,
-    ) -> Result<()> {
-        faiss_rc!({
-            sys::faiss_IndexIVF_search_preassigned(
-                self.mut_ptr(),
-                x.as_ref().len() as i64 / self.d(),
-                x.as_ref().as_ptr(),
-                k,
-                assign.as_ref().as_ptr(),
-                centroiid_dis.as_ref().as_ptr(),
-                distances.as_mut().as_mut_ptr(),
-                labels.as_mut().as_mut_ptr(),
-                store_pairs as i32,
-            )
-        })?;
-        Ok(())
-    }
-    pub fn get_list_size(&self, list_no: usize) -> usize {
-        unsafe { sys::faiss_IndexIVF_get_list_size(self.ptr(), list_no) }
+    fn search_preassigned(&self) -> Result<()> {
+        // TODO
+        todo!()
     }
 
-    pub fn make_direct_map(&mut self, new_maintain_direct_map: bool) -> Result<()> {
-        faiss_rc!({
-            sys::faiss_IndexIVF_make_direct_map(self.mut_ptr(), new_maintain_direct_map as i32)
-        })?;
+    fn get_list_size(&self, list_no: usize) -> usize {
+        unsafe { sys::faiss_IndexIVF_get_list_size(self.inner(), list_no) }
+    }
+
+    fn make_direct_map(&mut self, new: bool) -> Result<()> {
+        rc!({ sys::faiss_IndexIVF_make_direct_map(self.inner(), new as i32) })?;
         Ok(())
     }
 
-    pub fn imbalance_factor(&self) -> f64 {
-        unsafe { sys::faiss_IndexIVF_imbalance_factor(self.ptr()) }
+    fn imbalance_factor(&self) -> f64 {
+        unsafe { sys::faiss_IndexIVF_imbalance_factor(self.inner()) }
     }
 
-    pub fn print_stats(&self) {
-        unsafe { sys::faiss_IndexIVF_print_stats(self.ptr()) }
+    fn print_stats(&self) {
+        unsafe { sys::faiss_IndexIVF_print_stats(self.inner()) }
     }
 
-    pub fn invlists_get_ids(&self, list_no: usize, mut invlist: impl AsMut<[i64]>) {
+    fn invlists_get_ids(&self, list_no: usize, invlist: &mut [i64]) {
         unsafe {
-            sys::faiss_IndexIVF_invlists_get_ids(self.ptr(), list_no, invlist.as_mut().as_mut_ptr())
+            sys::faiss_IndexIVF_invlists_get_ids(self.inner(), list_no, invlist.as_mut_ptr())
         };
     }
 }
+
+pub struct FaissIndexIVFImpl {
+    inner: *mut sys::FaissIndexIVF,
+}
+
+impl_index_drop!(FaissIndexIVFImpl, faiss_IndexIVF_free);
+impl_index_trait!(FaissIndexIVFImpl);
+
+impl FaissIndexIVFImpl {
+    pub fn downcast(index: impl FaissIndexTrait) -> Result<Self> {
+        let i = index.into_inner();
+        let i = unsafe { sys::faiss_IndexIVF_cast(i) };
+        match i.is_null() {
+            true => Err(Error::DowncastFailure),
+            false => Ok(Self { inner: i }),
+        }
+    }
+}
+
+impl FaissIndexIVFTrait for FaissIndexIVFImpl {}
 
 pub struct FaissIndexIVFStats {
     inner: *mut sys::FaissIndexIVFStats,
 }
 
-impl Default for FaissIndexIVFStats {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl FaissIndexIVFStats {
-    pub fn new() -> Self {
+    pub fn get() -> Self {
         let inner = unsafe { sys::faiss_get_indexIVF_stats() };
         Self { inner }
     }
 
     pub fn reset(&mut self) {
         unsafe { sys::faiss_IndexIVFStats_reset(self.inner) }
+    }
+}
+
+#[allow(unused)]
+pub struct FaissIndexIVFQuantizer<'a, T>
+where
+    T: FaissIndexIVFTrait,
+{
+    inner: *mut sys::FaissIndex,
+    marker: PhantomData<&'a T>,
+}
+
+impl<'a, T> FaissIndexTrait for FaissIndexIVFQuantizer<'a, T>
+where
+    T: FaissIndexIVFTrait,
+{
+    fn inner(&self) -> *mut sys::FaissIndex {
+        self.inner as *mut _
+    }
+
+    fn into_inner(self) -> *mut sys::FaissIndex {
+        unimplemented!()
     }
 }
