@@ -1,19 +1,19 @@
-workspace = { members = ["faiss-next-sys"] }
 [package]
 name = "faiss-next"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-
 [dependencies]
-faiss-next-sys = { version = "0.4.0", path = "./faiss-next-sys" }
-itertools = "0.12.1"
+cxx = { version = "1.0.119", features = ["c++17"] }
+num_enum = "0.7.2"
+smart-default = "0.7.1"
 thiserror = "1.0.57"
 tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+
+[build-dependencies]
+cxx-build = "1.0.119"
 
 [dev-dependencies]
-ndarray = "0.15.6"
-ndarray-rand = "0.14.0"
+tracing-subscriber = "0.3.18"

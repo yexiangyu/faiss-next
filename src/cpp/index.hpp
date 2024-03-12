@@ -1,0 +1,37 @@
+#include "types.hpp"
+
+int32_t             version_major();
+int32_t             version_minor();
+int32_t             version_patch();
+void                index_free(Index *index);
+int                 index_d(const Index *index);
+int64_t             index_ntotal(const Index *index);
+bool                index_verbose(const Index *index);
+void                index_set_verbose(Index *index, bool verbose);
+bool                index_is_trained(const Index *index);
+int                 index_metric_type(const Index *index);
+float               index_metric_arg(const Index *index);
+void                index_train(Index *index, int64_t n, const float *x);
+void                index_add(Index *index, int64_t n, const float *x);
+void                index_add_with_ids(Index *index, int64_t n, const float *x, const int64_t *xids);
+void                index_search(const Index *index, int64_t n, const float *x, int64_t k, float *distances, int64_t *labels, const SearchParameters *params);
+void                index_range_search(const Index *index, int64_t n, const float *x, float radius, int *result, const SearchParameters *params);
+void                index_assign(const Index *index, int64_t n, const float *x, int64_t *labels, int64_t k);
+void                index_reset(Index *index);
+size_t              index_remove_ids(Index *index, const IDSelector *sel);
+void                index_reconstruct(Index *index, int64_t key, float *recons);
+void                index_reconstruct_batch(Index *index, int64_t n, const int64_t *keys, float *recons);
+void                index_reconstruct_n(Index *index, int64_t i0, int64_t ni,  float *recons);
+void                index_search_and_reconstruct(Index *index, int64_t n, const float *x, int64_t k, float *distances, int64_t *labels, float *recons, const SearchParameters *params);
+void                index_compute_residual(const Index *index, const float *x, float *residual, const int64_t key);
+void                index_compute_residual_n(const Index *index, int64_t n, const float *x, float *residual, const int64_t *keys);
+DistanceComputer*   index_get_distance_computer(const Index *index);
+size_t              index_sa_code_size(const Index *index);
+void                index_sa_encode(const Index *index, int64_t n, const float *x, uint8_t *bytes);
+void                index_sa_decode(const Index *index, int64_t n, const uint8_t *bytes, float *x);
+void                index_merge_from(Index *index, Index *rhs, int64_t add_id);
+bool                index_check_compatible_for_merge(const Index *index, const Index *rhs);
+SearchParameters*   search_parameters_new(IDSelector *sel);
+void                search_parameters_free(SearchParameters *sel);
+IDSelector*         search_parameters_sel(SearchParameters *sp);
+void                search_parameters_set_sel(SearchParameters *sp, IDSelector *sel);
