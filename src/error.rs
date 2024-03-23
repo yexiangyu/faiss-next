@@ -1,24 +1,25 @@
+use faiss_next_sys as sys;
+use std::ffi::CStr;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("rc={}, message={}", .code, .message)]
-    FaissError { code: i32, message: String },
-    #[error("invalid index description")]
-    InvalidIndexDescription,
-    #[error("invalid combination name")]
-    InvalidCombinationName,
-    #[error("invalid index parameters")]
-    InvalidIndexParameters,
-    #[error("downcast index failure")]
-    DowncastFailure,
+    #[error("faiss error code={}, message={}", .code, .message)]
+    Faiss { code: i32, message: String },
 }
 
 impl From<i32> for Error {
     fn from(code: i32) -> Self {
         let message = unsafe {
-            let c_str = std::ffi::CStr::from_ptr(faiss_next_sys::faiss_get_last_error());
-            c_str.to_string_lossy().into_owned()
+            let c_str = sys::faiss_get_last_error();
+            match c_str.is_null() {
+                true => "unknown error".into(),
+                false => {
+                    let slice = CStr::from_ptr(c_str).to_bytes();
+                    String::from_utf8_lossy(slice).into_owned()
+                }
+            }
         };
-        Error::FaissError { code, message }
+        Error::Faiss { code, message }
     }
 }
 

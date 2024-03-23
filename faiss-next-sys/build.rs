@@ -1,139 +1,91 @@
-use bindgen::Builder;
-use std::env::var;
-use std::path::PathBuf;
+use anyhow::Result;
 
-fn main() {
-    // ignore build when generating docs.rs.
-    if var("DOC_RS").is_ok() {
-        return;
-    }
-
+fn main() -> Result<()> {
     if cfg!(feature = "bindgen") {
-        do_bindgen();
-        return;
+        gen()?;
     }
-
-    do_link();
+    link()?;
+    Ok(())
 }
 
-fn do_bindgen() {
-    println!("cargo:rerun-if-changed=faiss.h");
+fn link() -> Result<()> {
+    Ok(())
+}
 
-    let mut builder = Builder::default()
+fn gen() -> Result<()> {
+    println!("cargo:rerun-if-changed=faiss.h");
+    println!("cargo:rerun-if-env-changed=FAISS_INCLUDE_DIR");
+
+    let mut builder = bindgen::Builder::default()
         .header("faiss.h")
         .derive_default(true)
         .default_enum_style(bindgen::EnumVariation::Rust {
             non_exhaustive: true,
         })
+        .size_t_is_usize(true)
         .layout_tests(false)
         .allowlist_function("faiss_.*")
         .allowlist_type("idx_t|Faiss.*")
         .opaque_type("FILE");
 
-    if let Some(faiss_dir) = faiss_dir() {
-        builder = builder.clang_arg(format!("-I{}", faiss_dir.join("include").display()));
+    if let Some(inc_dir) = get_include_dir() {
+        builder = builder.clang_arg(format!("-I{}", inc_dir));
     }
-
-    let os_name = var("CARGO_CFG_TARGET_OS").expect("no in cargo");
-    let output_dir = PathBuf::from("src").join(os_name);
-
-    std::fs::create_dir_all(&output_dir).expect("failed to create output_dir");
-
-    let mut output = output_dir.join("bindings.rs");
 
     if cfg!(feature = "gpu") {
-        output = output_dir.join("bindings_gpu.rs");
-        builder = builder
-            .clang_arg("-DFAISS_USE_GPU")
-            .clang_arg(format!("-I{}", cuda_include_dir()));
+        builder = builder.clang_arg("-DFAISS_USE_GPU");
     }
 
-    builder
-        .generate()
-        .expect("unable to generate bindings")
-        .write_to_file(output)
-        .expect("unable to write bindings");
+    let bindings = builder.generate()?;
+
+    let tpl = triplet();
+
+    bindings.write_to_file(format!("src/{}.rs", &tpl))?;
+
+    Ok(())
 }
 
-fn do_link() {
-    if let Some(faiss_dir) = faiss_dir() {
-        println!(
-            "cargo:rustc-link-search={}",
-            faiss_dir.join("lib").display()
-        );
+fn get_include_dir() -> Option<String> {
+    if let Ok(inc_dir) = std::env::var("FAISS_INCLUDE_DIR") {
+        return Some(inc_dir);
     }
 
-    println!("cargo:rustc-link-lib=faiss_c");
-    println!("cargo:rustc-link-lib=faiss");
-    if cfg!(target_os = "linux") {
-        println!("cargo:rustc-link-search=/opt/intel/oneapi/mkl/latest/lib",);
-        println!("cargo:rustc-link-lib=mkl_rt");
-    }
-}
-
-fn faiss_dir() -> Option<PathBuf> {
-    if let Ok(faiss_dir) = var("FAISS_DIR") {
-        let faiss_dir = PathBuf::from(faiss_dir);
-        if faiss_dir.is_dir()
-            && faiss_dir.exists()
-            && faiss_dir.join("lib").exists()
-            && faiss_dir.join("include").exists()
+    if cfg!(target_os = "macos") {
+        if cfg!(target_arch = "aarch64")
+        // Apple Silicon
         {
-            return Some(faiss_dir);
-        }
-    }
-
-    if cfg!(target_family = "unix") {
-        if let Ok(home) = var("HOME") {
-            let home = PathBuf::from(home);
-            let faiss_dir = home.join("faiss");
-            if faiss_dir.is_dir()
-                && faiss_dir.exists()
-                && faiss_dir.join("lib").exists()
-                && faiss_dir.join("include").exists()
-            {
-                return Some(faiss_dir);
+            let inc_dir = "/opt/homebrew/opt/faiss/include";
+            if std::path::Path::new(inc_dir).exists() {
+                return Some(inc_dir.to_string());
+            }
+        } else if cfg!(target_arch = "x64_64")
+        // Intel
+        {
+            let inc_dir = "/usr/local/homebrew/opt/faiss/include";
+            if std::path::Path::new(inc_dir).exists() {
+                return Some(inc_dir.to_string());
             }
         }
-    } else if cfg!(target_family = "windows") {
-        if let Ok(home) = var("USERPROFILE") {
-            let home = PathBuf::from(home);
-            let faiss_dir = home.join("faiss");
-            if faiss_dir.is_dir()
-                && faiss_dir.exists()
-                && faiss_dir.join("lib").exists()
-                && faiss_dir.join("include").exists()
-            {
-                return Some(faiss_dir);
-            }
-        }
-
-        let tool = PathBuf::from("c:\\tools\\faiss");
-        if tool.exists()
-            && tool.is_dir()
-            && tool.join("lib").exists()
-            && tool.join("include").exists()
-        {
-            return Some(tool);
-        }
-    }
-
-    None
+    } else {
+        panic!("os not supported");
+    };
+    todo!()
 }
 
-fn cuda_include_dir() -> String {
-    let mut inc_dir = "".to_string();
+fn triplet() -> String {
+    let os = if cfg!(target_os = "macos") {
+        "macos"
+    } else {
+        panic!("os not supported");
+    };
 
-    if cfg!(target_os = "linux") {
-        inc_dir = "/usr/local/cuda/include/".to_string();
-    } else if cfg!(target_os = "windows") {
-        let cuda_path = var("CUDA_PATH").expect("failed to find cuda path");
-        inc_dir = format!("{}", PathBuf::from(cuda_path).join("include").display());
-    }
+    let arch = if cfg!(target_arch = "aarch64") {
+        "aarch64"
+    } else {
+        panic!("arch not supported");
+    };
 
-    if inc_dir.is_empty() {
-        panic!("could not find cuda include dir");
-    }
+    let use_gpu = if cfg!(feature = "gpu") { "gpu" } else { "cpu" };
 
-    inc_dir
+    format!("{}-{}-{}", os, arch, use_gpu)
 }
