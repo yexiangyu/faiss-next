@@ -5,6 +5,10 @@ use std::ffi::CStr;
 pub enum Error {
     #[error("faiss error code={}, message={}", .code, .message)]
     Faiss { code: i32, message: String },
+    #[error("invalid description={}", .desc)]
+    InvalidDescription { desc: String },
+    #[error("not standard layout")]
+    NotStandardLayout,
 }
 
 impl From<i32> for Error {

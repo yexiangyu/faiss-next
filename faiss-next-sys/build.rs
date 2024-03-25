@@ -9,6 +9,8 @@ fn main() -> Result<()> {
 }
 
 fn link() -> Result<()> {
+    println!("cargo:rustc-link-lib=faiss_c");
+    println!("cargo:rustc-link-lib=faiss");
     Ok(())
 }
 

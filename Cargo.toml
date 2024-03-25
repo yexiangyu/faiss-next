@@ -8,6 +8,12 @@ edition = "2021"
 [dependencies]
 faiss-next-sys = { version = "0.4.0", path = "./faiss-next-sys" }
 thiserror = "1.0.58"
+tracing = "0.1.40"
+
+[dev-dependencies]
+tracing-subscriber = "0.3.18"
+ndarray = "0.15.6"
+ndarray-rand = "0.14.0"
 
 [workspace]
 members = ["faiss-next-sys"]

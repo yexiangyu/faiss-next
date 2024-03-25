@@ -1,4 +1,6 @@
+use crate::metric::MetricType;
 use faiss_next_sys as sys;
+use tracing::*;
 
 use crate::{
     aux_index_structures::{IDSelectorTrait, RangeSearchResult},
@@ -18,6 +20,7 @@ pub struct SearchParameters {
 
 impl Drop for SearchParameters {
     fn drop(&mut self) {
+        trace!("drop SearchParameters inner={:?}", self.inner);
         unsafe { sys::faiss_SearchParameters_free(self.inner) }
     }
 }
@@ -30,9 +33,13 @@ impl SearchParametersTrait for SearchParameters {
 
 impl SearchParameters {
     pub fn new(sel: &impl IDSelectorTrait) -> Result<Self> {
-        let sel = Box::from(sel);
         let mut inner = null_mut();
         rc!({ sys::faiss_SearchParameters_new(&mut inner, sel.ptr()) })?;
+        trace!(
+            "new SearchParameters with sel={:?}, inner={:?}",
+            sel.ptr(),
+            inner
+        );
         Ok(Self { inner })
     }
 }
@@ -52,7 +59,7 @@ pub trait IndexTrait {
         unsafe { sys::faiss_Index_ntotal(self.ptr()) }
     }
 
-    fn metric_type(&self) -> FaissMetricType {
+    fn metric_type(&self) -> MetricType {
         unsafe { sys::faiss_Index_metric_type(self.ptr()) }
     }
     fn verbose(&self) -> bool {
@@ -216,3 +223,38 @@ pub trait IndexTrait {
         rc!({ sys::faiss_Index_sa_decode(self.ptr(), n, codes.as_ptr(), x.as_mut_ptr()) })
     }
 }
+
+macro_rules! impl_index {
+    ($cls: ty) => {
+        impl crate::index::IndexTrait for $cls {
+            fn ptr(&self) -> *mut faiss_next_sys::FaissIndex {
+                self.inner
+            }
+        }
+
+        impl Drop for $cls {
+            fn drop(&mut self) {
+                tracing::trace!("drop {} inner={:?}", stringify!($cls), self.inner);
+                if !self.inner.is_null() {
+                    unsafe { faiss_next_sys::faiss_Index_free(self.inner as *mut _) };
+                }
+            }
+        }
+
+        impl std::fmt::Debug for $cls {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_struct("IndexImpl")
+                    .field("inner", &self.inner)
+                    .field("d", &self.d())
+                    .field("is_trained", &self.is_trained())
+                    .field("ntotal", &self.ntotal())
+                    .field("metric_type", &self.metric_type())
+                    .field("verbose", &self.verbose())
+                    .field("sa_code_size", &self.sa_code_size())
+                    .finish()
+            }
+        }
+    };
+}
+
+pub(crate) use impl_index;

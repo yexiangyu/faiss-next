@@ -3,3 +3,4 @@ pub mod error;
 pub mod index;
 pub mod index_factory;
 pub mod macros;
+pub mod metric;
