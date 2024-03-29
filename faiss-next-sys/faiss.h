@@ -28,6 +28,6 @@
 #include "faiss/c_api/gpu/GpuIndex_c.h"
 #include "faiss/c_api/gpu/GpuIndicesOptions_c.h"
 #include "faiss/c_api/gpu/GpuResources_c.h"
-#include "faiss/c_api/gpu/macros_impl.h"
+// #include "faiss/c_api/gpu/macros_impl.h"
 #include "faiss/c_api/gpu/StandardGpuResources_c.h"
 #endif

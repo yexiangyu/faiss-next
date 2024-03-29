@@ -92,7 +92,7 @@ pub trait IDSelectorTrait {
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorNot_new(&mut inner, source.ptr()) })?;
         trace!(
-            "create id_selector_not inner={:?} by source={:?}",
+            "create IDSelectorNot inner={:?}, source={:?}",
             inner,
             source.ptr()
         );
@@ -108,7 +108,7 @@ pub trait IDSelectorTrait {
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorAnd_new(&mut inner, l.ptr(), r.ptr()) })?;
         trace!(
-            "create id_selector_and inner={:?} by l={:?}, r={:?}",
+            "create IDSelectorAnd inner={:?}, l={:?}, r={:?}",
             inner,
             l.ptr(),
             r.ptr()
@@ -125,7 +125,7 @@ pub trait IDSelectorTrait {
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorOr_new(&mut inner, l.ptr(), r.ptr()) })?;
         trace!(
-            "create id_selector_or inner={:?} by l={:?}, r={:?}",
+            "create IDSelectorOr inner={:?}, l={:?}, r={:?}",
             inner,
             l.ptr(),
             r.ptr()
@@ -142,7 +142,7 @@ pub trait IDSelectorTrait {
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorXOr_new(&mut inner, l.ptr(), r.ptr()) })?;
         trace!(
-            "create id_selector_xor inner={:?} by l={:?}, r={:?}",
+            "create IDSelectorXOr inner={:?}, l={:?}, r={:?}",
             inner,
             l.ptr(),
             r.ptr()
@@ -165,7 +165,7 @@ macro_rules! impl_drop {
     ($cls: ty, $free: ident) => {
         impl Drop for $cls {
             fn drop(&mut self) {
-                trace!("drop {} inner={:?}", stringify!($cls), self.inner);
+                tracing::trace!("drop {} inner={:?}", stringify!($cls), self.inner);
                 unsafe { sys::$free(self.inner as *mut _) }
             }
         }
@@ -215,6 +215,7 @@ impl IDSelectorBatch {
         let mut inner = null_mut();
         let ids = ids.as_ref();
         let n = ids.len();
+        trace!("create IDSelectorBatch n={}", n);
         rc!({ sys::faiss_IDSelectorBatch_new(&mut inner, n, ids.as_ptr()) })?;
         let r = Self { inner };
         trace!(?r, "create");
@@ -388,4 +389,16 @@ pub trait DistanceComputerTrait {
         rc!({ sys::faiss_DistanceComputer_symmetric_dis(self.ptr(), i, j, &mut r) })?;
         Ok(r)
     }
+}
+
+#[cfg(test)]
+#[test]
+fn test_id_selector_ok() -> Result<()> {
+    std::env::set_var("RUST_LOG", "trace");
+    let _ = tracing_subscriber::fmt::try_init();
+    let sel = IDSelectorBatch::new([1, 2, 3])?
+        .not()?
+        .or(IDSelectorRange::new(0, 10)?)?;
+    assert!(sel.is_member(1));
+    Ok(())
 }

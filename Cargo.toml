@@ -1,14 +1,19 @@
 [package]
 name = "faiss-next"
-version = "0.1.0"
+version = "0.4.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 faiss-next-sys = { version = "0.4.0", path = "./faiss-next-sys" }
+smart-default = "0.7.1"
 thiserror = "1.0.58"
 tracing = "0.1.40"
+
+[features]
+default = []
+gpu = ["faiss-next-sys/gpu"]
 
 [dev-dependencies]
 tracing-subscriber = "0.3.18"

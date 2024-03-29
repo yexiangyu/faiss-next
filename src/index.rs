@@ -95,7 +95,7 @@ pub trait IndexTrait {
         k: i64,
         mut distances: impl AsMut<[f32]>,
         mut lablels: impl AsMut<[i64]>,
-        params: Option<&impl SearchParametersTrait>,
+        params: Option<impl SearchParametersTrait>,
     ) -> Result<()> {
         let x = x.as_ref();
         let n = x.as_ref().len() as i64 / self.d() as i64;
@@ -250,7 +250,6 @@ macro_rules! impl_index {
                     .field("ntotal", &self.ntotal())
                     .field("metric_type", &self.metric_type())
                     .field("verbose", &self.verbose())
-                    .field("sa_code_size", &self.sa_code_size())
                     .finish()
             }
         }

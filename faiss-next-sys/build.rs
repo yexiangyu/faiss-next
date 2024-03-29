@@ -36,6 +36,9 @@ fn gen() -> Result<()> {
 
     if cfg!(feature = "gpu") {
         builder = builder.clang_arg("-DFAISS_USE_GPU");
+        if let Some(cuda_dir) = get_cuda_dir() {
+            builder = builder.clang_arg(format!("-I{}/include", cuda_dir));
+        }
     }
 
     let bindings = builder.generate()?;
@@ -68,21 +71,38 @@ fn get_include_dir() -> Option<String> {
                 return Some(inc_dir.to_string());
             }
         }
+    } else if cfg!(target_os = "linux") {
+        return None;
     } else {
         panic!("os not supported");
     };
-    todo!()
+    unreachable!()
+}
+
+fn get_cuda_dir() -> Option<String> {
+    if cfg!(target_os = "linux") {
+        let cuda_dir = "/usr/local/cuda";
+        if std::path::PathBuf::from(cuda_dir).exists() {
+            return Some(cuda_dir.to_string());
+        }
+        return None;
+    }
+    unreachable!()
 }
 
 fn triplet() -> String {
     let os = if cfg!(target_os = "macos") {
         "macos"
+    } else if cfg!(target_os = "linux") {
+        "linux"
     } else {
         panic!("os not supported");
     };
 
     let arch = if cfg!(target_arch = "aarch64") {
         "aarch64"
+    } else if cfg!(target_arch = "x86_64") {
+        "x86_64"
     } else {
         panic!("arch not supported");
     };
