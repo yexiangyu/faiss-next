@@ -9,6 +9,8 @@ pub enum Error {
     InvalidDescription { desc: String },
     #[error("not standard layout")]
     NotStandardLayout,
+    #[error("invalid devices=[]")]
+    InvalidGpuDevices,
 }
 
 impl From<i32> for Error {

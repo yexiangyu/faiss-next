@@ -36,12 +36,16 @@ pub fn index_factory(
 #[cfg(test)]
 #[test]
 fn test_index_factory_ok() -> Result<()> {
-    use ndarray::{s, Array2};
-    use ndarray_rand::{rand_distr::Uniform, RandomExt};
     std::env::set_var("RUST_LOG", "trace");
     let _ = tracing_subscriber::fmt::try_init();
+
+    use crate::index::SearchParameters;
+    use ndarray::{s, Array2};
+    use ndarray_rand::{rand_distr::Uniform, RandomExt};
+
     let d = 128;
     let n = 1024;
+    let k = 1;
     let ids = (0..n).map(|i| i as i64).collect::<Vec<_>>();
     let base = Array2::random([n, d], Uniform::new(-1.0f32, 1.0f32));
     let query = base.slice(s![42, ..]);
@@ -52,7 +56,17 @@ fn test_index_factory_ok() -> Result<()> {
         .as_slice_memory_order()
         .ok_or(Error::NotStandardLayout)?;
     let mut index = index_factory(128, "IDMap,Flat", MetricType::METRIC_L2)?;
-    index.add(base, Option::<&[i64]>::None)?;
+    index.add(base, Some(ids))?;
     trace!(?index);
+    let mut distances = vec![0.0f32; k as usize];
+    let mut labels = vec![0i64; k as usize];
+    index.search(
+        query,
+        1,
+        &mut distances,
+        &mut labels,
+        Option::<SearchParameters>::None,
+    )?;
+    info!("distances={:?}, labels={:?}", distances, labels);
     Ok(())
 }
