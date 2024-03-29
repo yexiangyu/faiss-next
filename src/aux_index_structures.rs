@@ -1,6 +1,7 @@
 use std::ptr::null_mut;
 
 use faiss_next_sys as sys;
+use tracing::trace;
 
 use crate::{error::Result, macros::rc};
 
@@ -10,6 +11,7 @@ pub struct RangeSearchResult {
 
 impl Drop for RangeSearchResult {
     fn drop(&mut self) {
+        trace!(?self, "drop");
         unsafe { sys::faiss_RangeSearchResult_free(self.inner) }
     }
 }
@@ -22,7 +24,9 @@ impl RangeSearchResult {
     pub fn new(nq: i64, alloc_lims: bool) -> Result<Self> {
         let mut inner = null_mut();
         rc!({ sys::faiss_RangeSearchResult_new_with(&mut inner, nq, alloc_lims as i32) })?;
-        Ok(Self { inner })
+        let r = Self { inner };
+        trace!(?r, "new");
+        Ok(r)
     }
 
     pub fn do_allocation(&mut self) -> Result<()> {
@@ -62,6 +66,17 @@ impl RangeSearchResult {
     }
 }
 
+impl std::fmt::Debug for RangeSearchResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RangeSearchResult")
+            .field("inner", &self.inner)
+            .field("nq", &self.nq())
+            .field("buffer_size", &self.buffer_size())
+            .field("lims", &self.lims())
+            .finish()
+    }
+}
+
 pub trait IDSelectorTrait {
     fn ptr(&self) -> *mut sys::FaissIDSelector;
 
@@ -76,6 +91,11 @@ pub trait IDSelectorTrait {
         let source = Box::from(self);
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorNot_new(&mut inner, source.ptr()) })?;
+        trace!(
+            "create id_selector_not inner={:?} by source={:?}",
+            inner,
+            source.ptr()
+        );
         Ok(IDSelectorNot { inner, source })
     }
 
@@ -87,6 +107,12 @@ pub trait IDSelectorTrait {
         let r = Box::from(rhs);
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorAnd_new(&mut inner, l.ptr(), r.ptr()) })?;
+        trace!(
+            "create id_selector_and inner={:?} by l={:?}, r={:?}",
+            inner,
+            l.ptr(),
+            r.ptr()
+        );
         Ok(IDSelectorAnd { inner, l, r })
     }
 
@@ -98,6 +124,12 @@ pub trait IDSelectorTrait {
         let r = Box::from(rhs);
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorOr_new(&mut inner, l.ptr(), r.ptr()) })?;
+        trace!(
+            "create id_selector_or inner={:?} by l={:?}, r={:?}",
+            inner,
+            l.ptr(),
+            r.ptr()
+        );
         Ok(IDSelectorOr { inner, l, r })
     }
 
@@ -109,6 +141,12 @@ pub trait IDSelectorTrait {
         let r = Box::from(rhs);
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorXOr_new(&mut inner, l.ptr(), r.ptr()) })?;
+        trace!(
+            "create id_selector_xor inner={:?} by l={:?}, r={:?}",
+            inner,
+            l.ptr(),
+            r.ptr()
+        );
         Ok(IDSelectorXOr { inner, l, r })
     }
 }
@@ -127,6 +165,7 @@ macro_rules! impl_drop {
     ($cls: ty, $free: ident) => {
         impl Drop for $cls {
             fn drop(&mut self) {
+                trace!("drop {} inner={:?}", stringify!($cls), self.inner);
                 unsafe { sys::$free(self.inner as *mut _) }
             }
         }
@@ -139,11 +178,21 @@ pub struct IDSelectorRange {
 impl_drop!(IDSelectorRange, faiss_IDSelectorRange_free);
 impl_id_selector!(IDSelectorRange);
 
+impl std::fmt::Debug for IDSelectorRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IDSelectorRange")
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
 impl IDSelectorRange {
     pub fn new(imin: i64, imax: i64) -> Result<Self> {
         let mut inner = null_mut();
         rc!({ sys::faiss_IDSelectorRange_new(&mut inner, imin, imax) })?;
-        Ok(Self { inner })
+        let r = Self { inner };
+        trace!(?r, %imin, %imax, "create");
+        Ok(r)
     }
 }
 
@@ -153,13 +202,23 @@ pub struct IDSelectorBatch {
 impl_drop!(IDSelectorBatch, faiss_IDSelector_free);
 impl_id_selector!(IDSelectorBatch);
 
+impl std::fmt::Debug for IDSelectorBatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IDSelectorBatch")
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
 impl IDSelectorBatch {
     pub fn new(ids: impl AsRef<[i64]>) -> Result<Self> {
         let mut inner = null_mut();
         let ids = ids.as_ref();
         let n = ids.len();
         rc!({ sys::faiss_IDSelectorBatch_new(&mut inner, n, ids.as_ptr()) })?;
-        Ok(Self { inner })
+        let r = Self { inner };
+        trace!(?r, "create");
+        Ok(r)
     }
 }
 
