@@ -17,6 +17,9 @@ fn link() -> Result<()> {
 fn gen() -> Result<()> {
     println!("cargo:rerun-if-changed=faiss.h");
     println!("cargo:rerun-if-env-changed=FAISS_INCLUDE_DIR");
+    if cfg!(feature = "gpu") {
+        println!("cargo:rerun-if-env-changed=CUDA_DIR");
+    }
 
     let mut builder = bindgen::Builder::default()
         .header("faiss.h")
@@ -86,7 +89,16 @@ fn get_cuda_dir() -> Option<String> {
             return Some(cuda_dir.to_string());
         }
         return None;
+    } else if cfg!(target_os = "windows") {
+        if let Ok(cuda_dir) = std::env::var("CUDA_PATH") {
+            if std::path::PathBuf::from(&cuda_dir).exists() {
+                return Some(cuda_dir);
+            }
+            return Some(cuda_dir);
+        }
+        return None;
     }
+
     unreachable!()
 }
 
