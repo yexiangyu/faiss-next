@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub mod autotune;
 pub mod clustering;
 pub mod error;
@@ -17,5 +19,6 @@ pub mod prelude {
     pub use super::index::ivf::IndexIVFTrait;
     pub use super::index::scalar_quantizer::IndexScalarQuantizerTrait;
     pub use super::index::IndexTrait;
+    pub use super::metric::MetricType;
     pub use super::vector_transform::{LinearTransformTrait, VectorTransformTrait};
 }

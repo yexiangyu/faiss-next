@@ -39,6 +39,10 @@ pub trait GpuClonerOptionsTrait {
         unsafe { sys::faiss_GpuClonerOptions_usePrecomputed(self.ptr()) != 0 }
     }
 
+    fn set_use_precomputed(&mut self, value: bool) {
+        unsafe { sys::faiss_GpuClonerOptions_set_usePrecomputed(self.ptr(), value as i32) }
+    }
+
     fn reverse_vecs(&self) -> i64 {
         unsafe { sys::faiss_GpuClonerOptions_reserveVecs(self.ptr()) }
     }
@@ -161,11 +165,23 @@ impl GpuMultipleClonerOptions {
         unsafe { sys::faiss_GpuMultipleClonerOptions_set_shard(self.inner, value as i32) }
     }
 
+    pub fn enable_shard(self) -> Self {
+        let mut s = self;
+        s.set_shard(true);
+        s
+    }
+
+    pub fn with_shard_type(self, typ: i32) -> Self {
+        let mut s = self;
+        s.set_shard_type(typ);
+        s
+    }
+
     pub fn shard_type(&self) -> i32 {
         unsafe { sys::faiss_GpuMultipleClonerOptions_shard_type(self.inner) }
     }
 
-    pub fn set_shard_type(&self, value: i32) {
+    pub fn set_shard_type(&mut self, value: i32) {
         unsafe { sys::faiss_GpuMultipleClonerOptions_set_shard_type(self.inner, value) }
     }
 }

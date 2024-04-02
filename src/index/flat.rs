@@ -58,9 +58,9 @@ pub struct IndexFlat {
 impl_index_flat!(IndexFlat);
 
 impl IndexFlat {
-    pub fn new(d: i64, metric: MetricType) -> Result<Self> {
+    pub fn new(d: usize, metric: MetricType) -> Result<Self> {
         let mut inner = null_mut();
-        rc!({ sys::faiss_IndexFlat_new_with(&mut inner, d, metric.into()) })?;
+        rc!({ sys::faiss_IndexFlat_new_with(&mut inner, d as _, metric.into()) })?;
         trace!(?d, ?metric, "new IndexFlat inner={:?}", inner);
         Ok(Self { inner })
     }

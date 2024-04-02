@@ -26,10 +26,14 @@ impl Drop for SearchParametersIVF {
     }
 }
 
+#[derive(Debug)]
 pub struct IDSelectorBorrowed<'a> {
     inner: *mut sys::FaissIDSelector,
     _marker: PhantomData<&'a SearchParametersIVF>,
 }
+
+unsafe impl Send for IDSelectorBorrowed<'_> {}
+unsafe impl Sync for IDSelectorBorrowed<'_> {}
 
 impl IDSelectorTrait for IDSelectorBorrowed<'_> {
     fn ptr(&self) -> *mut sys::FaissIDSelector {
@@ -68,12 +72,31 @@ where
     _marker: PhantomData<&'a T>,
 }
 
+unsafe impl<T> Send for QuantizerBorrowed<'_, T> where T: IndexIVFTrait {}
+unsafe impl<T> Sync for QuantizerBorrowed<'_, T> where T: IndexIVFTrait {}
+
 impl<T> IndexTrait for QuantizerBorrowed<'_, T>
 where
     T: IndexIVFTrait,
 {
     fn ptr(&self) -> *mut sys::FaissIndex {
         self.inner
+    }
+}
+
+impl<T> std::fmt::Debug for QuantizerBorrowed<'_, T>
+where
+    T: IndexIVFTrait,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QuantizerBorrowed")
+            .field("inner", &self.inner)
+            .field("d", &self.d())
+            .field("is_trained", &self.is_trained())
+            .field("ntotal", &self.ntotal())
+            .field("metric_type", &self.metric_type())
+            .field("verbose", &self.verbose())
+            .finish()
     }
 }
 

@@ -90,6 +90,9 @@ macro_rules! impl_vector_transform {
                 }
             }
         }
+
+        unsafe impl Send for $cls {}
+        unsafe impl Sync for $cls {}
     };
 }
 
@@ -109,6 +112,7 @@ pub struct PCAMatrix {
     inner: *mut sys::FaissPCAMatrix,
 }
 impl_vector_transform!(PCAMatrix);
+
 impl PCAMatrix {
     pub fn new(d_in: i32, d_out: i32, eigen_power: f32, random_rotation: bool) -> Result<Self> {
         let mut inner = null_mut();

@@ -26,13 +26,15 @@ pub trait SearchParametersTrait {
     fn ptr(&self) -> *mut sys::FaissSearchParameters;
 }
 
+/// SearchParameters for `IndexTrait::search`
+#[derive(Debug)]
 pub struct SearchParameters {
     inner: *mut sys::FaissSearchParameters,
 }
 
 impl Drop for SearchParameters {
     fn drop(&mut self) {
-        trace!("drop SearchParameters inner={:?}", self.inner);
+        trace!(?self, "drop");
         unsafe { sys::faiss_SearchParameters_free(self.inner) }
     }
 }
@@ -44,20 +46,29 @@ impl SearchParametersTrait for SearchParameters {
 }
 
 impl SearchParameters {
+    /// Create a new `SearchParameters`
     pub fn new(sel: &impl IDSelectorTrait) -> Result<Self> {
         let mut inner = null_mut();
         rc!({ sys::faiss_SearchParameters_new(&mut inner, sel.ptr()) })?;
-        trace!(
-            "new SearchParameters with sel={:?}, inner={:?}",
-            sel.ptr(),
-            inner
-        );
-        Ok(Self { inner })
+        let r = Self { inner };
+        trace!(?r, "new");
+        Ok(r)
     }
 }
 
-pub trait IndexTrait {
+unsafe impl Send for SearchParameters {}
+unsafe impl Sync for SearchParameters {}
+
+pub trait IndexTrait: std::fmt::Debug + Send + Sync {
     fn ptr(&self) -> *mut sys::FaissIndex;
+
+    fn dry_run(&self) -> Result<()> {
+        let data = vec![0.0f32; self.d() as usize];
+        let mut d = vec![0.0f32];
+        let mut l = vec![0i64];
+        self.search(&data, 1, &mut d, &mut l, Option::<SearchParameters>::None)?;
+        Ok(())
+    }
 
     fn d(&self) -> i32 {
         unsafe { sys::faiss_Index_d(self.ptr()) }
@@ -104,24 +115,24 @@ pub trait IndexTrait {
     fn search(
         &self,
         x: impl AsRef<[f32]>,
-        k: i64,
+        k: usize,
         mut distances: impl AsMut<[f32]>,
         mut lablels: impl AsMut<[i64]>,
         params: Option<impl SearchParametersTrait>,
     ) -> Result<()> {
         let x = x.as_ref();
-        let n = x.as_ref().len() as i64 / self.d() as i64;
+        let n = x.as_ref().len() / self.d() as usize;
         let distances = distances.as_mut();
         let lablels = lablels.as_mut();
-        assert_eq!(n, lablels.as_ref().len() as i64);
-        assert_eq!(n * k, distances.as_ref().len() as i64);
+        assert_eq!(n, lablels.as_ref().len());
+        assert_eq!(n * k, distances.as_ref().len());
         match params {
             Some(params) => rc!({
                 sys::faiss_Index_search_with_params(
                     self.ptr(),
-                    n,
+                    n as _,
                     x.as_ptr(),
-                    k,
+                    k as _,
                     params.ptr(),
                     distances.as_mut_ptr(),
                     lablels.as_mut_ptr(),
@@ -130,9 +141,9 @@ pub trait IndexTrait {
             None => rc!({
                 sys::faiss_Index_search(
                     self.ptr(),
-                    n,
+                    n as _,
                     x.as_ptr(),
-                    k,
+                    k as _,
                     distances.as_mut_ptr(),
                     lablels.as_mut_ptr(),
                 )
@@ -238,6 +249,9 @@ pub trait IndexTrait {
 
 macro_rules! impl_index {
     ($cls: ty) => {
+        unsafe impl Send for $cls {}
+        unsafe impl Sync for $cls {}
+
         impl crate::index::IndexTrait for $cls {
             fn ptr(&self) -> *mut faiss_next_sys::FaissIndex {
                 self.inner

@@ -1,17 +1,16 @@
 use std::ptr::null_mut;
 
 use crate::error::Result;
+use crate::index::factory::IndexImpl;
 use crate::index::IndexTrait;
 use crate::macros::rc;
 use faiss_next_sys as sys;
 use tracing::trace;
 
-/// Clone an index.
-/// ```rust
-/// ```
-pub fn clone_index(index: &impl IndexTrait) -> Result<*mut sys::FaissIndex> {
+pub fn clone_index(index: &impl IndexTrait) -> Result<IndexImpl> {
     let mut inner = null_mut();
     rc!({ sys::faiss_clone_index(index.ptr(), &mut inner) })?;
-    trace!("clone index, source={:?}, target={:?}", index.ptr(), inner);
-    Ok(inner)
+    let r = IndexImpl::new(inner);
+    trace!(?index, ?r, "clone");
+    Ok(r)
 }

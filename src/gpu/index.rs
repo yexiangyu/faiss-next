@@ -1,4 +1,5 @@
 use faiss_next_sys as sys;
+use tracing::trace;
 
 use crate::error::{Error, Result};
 use crate::gpu::cloner_options::GpuClonerOptionsTrait;
@@ -6,6 +7,8 @@ use crate::gpu::resources::GpuResourcesProviderTrait;
 use crate::index::{impl_index, IndexTrait};
 use crate::macros::rc;
 use std::ptr::null_mut;
+
+use super::standard_resources::StandardGpuResources;
 
 pub struct GpuIndexConfig {
     inner: *mut sys::FaissGpuIndexConfig,
@@ -19,27 +22,23 @@ impl GpuIndexConfig {
 
 pub struct IndexGpuImpl {
     inner: *mut sys::FaissIndex,
+    _resources: Vec<StandardGpuResources>,
 }
 
 impl_index!(IndexGpuImpl);
 
 impl IndexGpuImpl {
-    pub fn new<P, O>(
-        providers: impl AsRef<[P]>,
+    pub fn new<O>(
+        providers: Vec<StandardGpuResources>,
         devices: impl AsRef<[i32]>,
         index: &impl IndexTrait,
         options: Option<O>,
     ) -> Result<Self>
     where
-        P: GpuResourcesProviderTrait,
         O: GpuClonerOptionsTrait,
     {
         let mut inner = null_mut();
-        let providers = providers
-            .as_ref()
-            .iter()
-            .map(|p| p.ptr())
-            .collect::<Vec<_>>();
+        let providers_ = providers.iter().map(|p| p.ptr()).collect::<Vec<_>>();
         let devices = devices.as_ref();
         match devices.len() {
             0 => return Err(Error::InvalidGpuDevices),
@@ -49,7 +48,7 @@ impl IndexGpuImpl {
                     Some(options) => {
                         rc!({
                             sys::faiss_index_cpu_to_gpu_with_options(
-                                providers[0],
+                                providers_[0],
                                 device,
                                 index.ptr(),
                                 options.ptr(),
@@ -58,7 +57,7 @@ impl IndexGpuImpl {
                         })?;
                     }
                     None => rc!({
-                        sys::faiss_index_cpu_to_gpu(providers[0], device, index.ptr(), &mut inner)
+                        sys::faiss_index_cpu_to_gpu(providers_[0], device, index.ptr(), &mut inner)
                     })?,
                 }
             }
@@ -66,8 +65,8 @@ impl IndexGpuImpl {
                 Some(options) => {
                     rc!({
                         sys::faiss_index_cpu_to_gpu_multiple_with_options(
-                            providers.as_ptr(),
-                            providers.len(),
+                            providers_.as_ptr(),
+                            providers_.len(),
                             devices.as_ptr(),
                             devices.len(),
                             index.ptr(),
@@ -78,7 +77,7 @@ impl IndexGpuImpl {
                 }
                 None => rc!({
                     sys::faiss_index_cpu_to_gpu_multiple(
-                        providers.as_ptr(),
+                        providers_.as_ptr(),
                         devices.as_ptr(),
                         devices.len(),
                         index.ptr(),
@@ -87,6 +86,11 @@ impl IndexGpuImpl {
                 })?,
             },
         };
-        Ok(Self { inner })
+        let r = Self {
+            inner,
+            _resources: providers,
+        };
+        trace!(?r, "new");
+        Ok(r)
     }
 }

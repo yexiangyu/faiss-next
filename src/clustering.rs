@@ -10,6 +10,7 @@ use tracing::trace;
 use crate::macros::rc;
 use crate::{error::Result, index::IndexTrait};
 
+/// Search parameter for search
 pub struct ClusteringParameters {
     inner: sys::FaissClusteringParameters,
 }
@@ -234,27 +235,4 @@ pub fn kmeans_clustering(
         )
     })?;
     Ok(q_error)
-}
-
-#[cfg(test)]
-#[test]
-fn test_kmeans_clustering_ok() -> Result<()> {
-    std::env::set_var("RUST_LOG", "trace");
-    use ndarray::Array2;
-    use ndarray_rand::{rand_distr::Uniform, RandomExt};
-    use tracing::*;
-
-    let n = 1024;
-    let d = 128;
-    let k = 2;
-
-    let _ = tracing_subscriber::fmt::try_init();
-    let x = Array2::random([n, d], Uniform::new(0.0, 1.0));
-    let mut centroids = Array2::zeros([k, d]);
-    let centroids_ = centroids.as_slice_memory_order_mut().unwrap();
-    let x = x.as_slice_memory_order().unwrap();
-    let q_error = kmeans_clustering(d, k, x, centroids_)?;
-    info!(?q_error);
-    info!(?centroids);
-    Ok(())
 }

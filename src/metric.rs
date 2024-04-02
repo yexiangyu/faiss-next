@@ -52,5 +52,3 @@ impl From<MetricType> for sys::FaissMetricType {
         }
     }
 }
-
-// pub use sys::FaissMetricType as MetricType;

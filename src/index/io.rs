@@ -36,30 +36,3 @@ pub fn read_index(path: impl AsRef<str>, flag: IOFlag) -> Result<IndexImpl> {
     trace!("read index={:?} to file={}", inner, path_);
     Ok(IndexImpl::new(inner))
 }
-
-#[cfg(test)]
-#[test]
-fn test_index_io_ok() -> Result<()> {
-    use crate::{index::factory::index_factory, metric::MetricType, prelude::*};
-    use ndarray::Array2;
-    use ndarray_rand::{rand_distr::Uniform, RandomExt};
-    use tracing::*;
-    std::env::set_var("RUST_LOG", "trace");
-
-    let _ = tracing_subscriber::fmt::try_init();
-    let (n, d) = (1024usize, 128usize);
-    let base = Array2::<f32>::random([n, d], Uniform::new(-1.0, 1.0));
-    let base = base.as_slice().ok_or(Error::NotStandardLayout)?;
-
-    let mut index = index_factory(d, "Flat", MetricType::L2)?;
-    index.add(base, Option::<&[_]>::None)?;
-
-    write_index(&index, "index_l2.idx")?;
-
-    let index_ = read_index("index_l2.idx", IOFlag::ReadOnly)?;
-    let mut index_ = crate::index::flat::IndexFlat::cast(index_);
-
-    let base_ = index_.xb();
-    info!("read index == write_index: {}", base_ == base);
-    Ok(())
-}

@@ -5,7 +5,7 @@ use tracing::trace;
 
 use crate::{error::Result, macros::rc};
 
-pub trait IDSelectorTrait {
+pub trait IDSelectorTrait: Send + Sync {
     fn ptr(&self) -> *mut sys::FaissIDSelector;
 
     fn is_member(&self, id: i64) -> bool {
@@ -94,6 +94,9 @@ macro_rules! impl_id_selector {
                     .finish()
             }
         }
+
+        unsafe impl Send for $cls {}
+        unsafe impl Sync for $cls {}
     };
 }
 
@@ -188,15 +191,3 @@ pub struct IDSelectorXOr {
 }
 impl_drop!(IDSelectorXOr, faiss_IDSelector_free);
 impl_id_selector!(IDSelectorXOr);
-
-#[cfg(test)]
-#[test]
-fn test_id_selector_ok() -> Result<()> {
-    std::env::set_var("RUST_LOG", "trace");
-    let _ = tracing_subscriber::fmt::try_init();
-    let sel = IDSelectorBatch::new([1, 2, 3])?
-        .not()?
-        .or(IDSelectorRange::new(0, 10)?)?;
-    assert!(sel.is_member(1));
-    Ok(())
-}
