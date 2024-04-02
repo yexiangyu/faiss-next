@@ -64,6 +64,7 @@ pub trait GpuResourcesTrait {
     }
 }
 
+#[derive(Debug)]
 pub struct GpuResources {
     inner: *mut sys::FaissGpuResources,
 }

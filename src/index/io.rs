@@ -57,7 +57,7 @@ fn test_index_io_ok() -> Result<()> {
     write_index(&index, "index_l2.idx")?;
 
     let index_ = read_index("index_l2.idx", IOFlag::ReadOnly)?;
-    let mut index_ = crate::index_flat::IndexFlat::cast(index_);
+    let mut index_ = crate::index::flat::IndexFlat::cast(index_);
 
     let base_ = index_.xb();
     info!("read index == write_index: {}", base_ == base);

@@ -9,12 +9,12 @@ use crate::macros::rc;
 pub trait GpuClonerOptionsTrait {
     fn ptr(&self) -> *mut sys::FaissGpuClonerOptions;
 
-    fn get_indices_options(&self) -> IndicesOptions {
-        unsafe { sys::faiss_GpuClonerOptions_indicesOptions(self.ptr()) }
+    fn indices_options(&self) -> IndicesOptions {
+        unsafe { sys::faiss_GpuClonerOptions_indicesOptions(self.ptr()) }.into()
     }
 
     fn set_indices_options(&mut self, options: IndicesOptions) {
-        unsafe { sys::faiss_GpuClonerOptions_set_indicesOptions(self.ptr(), options) }
+        unsafe { sys::faiss_GpuClonerOptions_set_indicesOptions(self.ptr(), options.into()) }
     }
 
     fn use_float16_coarse_quantizer(&self) -> bool {
@@ -67,9 +67,27 @@ pub struct GpuClonerOptions {
     inner: *mut sys::FaissGpuClonerOptions,
 }
 
+impl std::fmt::Debug for GpuClonerOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GpuClonerOptions")
+            .field("inner", &self.ptr())
+            .field("indices_options", &self.indices_options())
+            .field(
+                "use_float16_coarse_quantizer",
+                &self.use_float16_coarse_quantizer(),
+            )
+            .field("use_float16", &self.use_float16())
+            .field("use_precomputed", &self.use_precomputed())
+            .field("reverse_vecs", &self.reverse_vecs())
+            .field("store_transposed", &self.store_transposed())
+            .field("verbose", &self.verbose())
+            .finish()
+    }
+}
+
 impl Drop for GpuClonerOptions {
     fn drop(&mut self) {
-        trace!("Dropping GpuClonerOptions inner={:?}", self.inner);
+        trace!(?self, "drop");
         unsafe { sys::faiss_GpuClonerOptions_free(self.inner) }
     }
 }
@@ -84,8 +102,9 @@ impl GpuClonerOptions {
     pub fn new() -> Result<Self> {
         let mut inner = null_mut();
         rc!({ sys::faiss_GpuClonerOptions_new(&mut inner) })?;
-        trace!("new GpuClonerOptions inner={:?}", inner);
-        Ok(Self { inner })
+        let r = Self { inner };
+        trace!(?r, "new");
+        Ok(r)
     }
 }
 
@@ -93,9 +112,29 @@ pub struct GpuMultipleClonerOptions {
     inner: *mut sys::FaissGpuMultipleClonerOptions,
 }
 
+impl std::fmt::Debug for GpuMultipleClonerOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GpuMultipleClonerOptions")
+            .field("inner", &self.inner)
+            .field("indices_options", &self.indices_options())
+            .field(
+                "use_float16_coarse_quantizer",
+                &self.use_float16_coarse_quantizer(),
+            )
+            .field("use_float16", &self.use_float16())
+            .field("use_precomputed", &self.use_precomputed())
+            .field("reverse_vecs", &self.reverse_vecs())
+            .field("store_transposed", &self.store_transposed())
+            .field("verbose", &self.verbose())
+            .field("shard", &self.shard())
+            .field("shard_type", &self.shard_type())
+            .finish()
+    }
+}
+
 impl Drop for GpuMultipleClonerOptions {
     fn drop(&mut self) {
-        trace!("drop GpuMultipleClonerOptions inner={:?}", self.inner);
+        trace!(?self, "drop");
         unsafe { sys::faiss_GpuMultipleClonerOptions_free(self.inner) }
     }
 }
@@ -109,9 +148,10 @@ impl GpuClonerOptionsTrait for GpuMultipleClonerOptions {
 impl GpuMultipleClonerOptions {
     pub fn new() -> Result<Self> {
         let mut inner = null_mut();
-        trace!("new GpuMultipleClonerOptions inner={:?}", inner);
         rc!({ sys::faiss_GpuMultipleClonerOptions_new(&mut inner) })?;
-        Ok(Self { inner })
+        let r = Self { inner };
+        trace!(?r, "new");
+        Ok(r)
     }
     pub fn shard(&self) -> bool {
         unsafe { sys::faiss_GpuMultipleClonerOptions_shard(self.inner) != 0 }

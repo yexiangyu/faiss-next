@@ -21,7 +21,6 @@ use crate::{
     metric::MetricType,
 };
 use std::ptr::null_mut;
-pub use sys::FaissMetricType;
 
 pub trait SearchParametersTrait {
     fn ptr(&self) -> *mut sys::FaissSearchParameters;

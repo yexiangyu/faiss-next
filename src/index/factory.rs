@@ -57,7 +57,7 @@ fn test_index_factory_ok() -> Result<()> {
     let base = base
         .as_slice_memory_order()
         .ok_or(Error::NotStandardLayout)?;
-    let mut index = index_factory(128, "IDMap,Flat", MetricType::METRIC_L2)?;
+    let mut index = index_factory(128, "IDMap,Flat", MetricType::L2)?;
     index.add(base, Some(ids))?;
     trace!(?index);
     let mut distances = vec![0.0f32; k as usize];
