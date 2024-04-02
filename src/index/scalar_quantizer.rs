@@ -21,7 +21,7 @@ impl IndexScalarQuantizerTrait for IndexScalarQuantizer {}
 impl IndexScalarQuantizer {
     pub fn new(d: i64, typ: QuantizerType, metric: MetricType) -> Result<Self> {
         let mut inner = null_mut();
-        rc!({ sys::faiss_IndexScalarQuantizer_new_with(&mut inner, d, typ, metric) })?;
+        rc!({ sys::faiss_IndexScalarQuantizer_new_with(&mut inner, d, typ, metric.into()) })?;
         Ok(Self { inner })
     }
     pub fn cast(index: impl IndexTrait) -> Self {
@@ -53,7 +53,7 @@ impl IndexIVFScalarQuantizer {
                 d,
                 nlist,
                 qt,
-                metric,
+                metric.into(),
                 encode_residual as i32,
             )
         })?;

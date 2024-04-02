@@ -5,8 +5,8 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::ptr::null_mut;
 
-use crate::aux_index_structures::IDSelectorTrait;
 use crate::error::Result;
+use crate::implement::id_selector::IDSelectorTrait;
 use crate::index::{IndexTrait, SearchParametersTrait};
 use crate::macros::rc;
 

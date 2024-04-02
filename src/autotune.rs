@@ -7,8 +7,9 @@ use std::{
 use crate::error::Result;
 use crate::index::IndexTrait;
 use crate::macros::rc;
-use faiss_next_sys as sys;
 use tracing::trace;
+
+use faiss_next_sys as sys;
 
 pub struct ParameterRange {
     inner: *mut sys::FaissParameterRange,

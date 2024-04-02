@@ -2,8 +2,8 @@ use std::ffi::CString;
 use std::ptr::null_mut;
 
 use crate::error::{Error, Result};
+use crate::index::factory::IndexImpl;
 use crate::index::IndexTrait;
-use crate::index_factory::IndexImpl;
 use crate::macros::rc;
 
 use faiss_next_sys as sys;
@@ -40,7 +40,7 @@ pub fn read_index(path: impl AsRef<str>, flag: IOFlag) -> Result<IndexImpl> {
 #[cfg(test)]
 #[test]
 fn test_index_io_ok() -> Result<()> {
-    use crate::{index_factory::index_factory, prelude::*};
+    use crate::{index::factory::index_factory, metric::MetricType, prelude::*};
     use ndarray::Array2;
     use ndarray_rand::{rand_distr::Uniform, RandomExt};
     use tracing::*;
@@ -51,7 +51,7 @@ fn test_index_io_ok() -> Result<()> {
     let base = Array2::<f32>::random([n, d], Uniform::new(-1.0, 1.0));
     let base = base.as_slice().ok_or(Error::NotStandardLayout)?;
 
-    let mut index = index_factory(d, "Flat", sys::FaissMetricType::METRIC_L2)?;
+    let mut index = index_factory(d, "Flat", MetricType::L2)?;
     index.add(base, Option::<&[_]>::None)?;
 
     write_index(&index, "index_l2.idx")?;

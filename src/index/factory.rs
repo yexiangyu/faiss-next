@@ -29,7 +29,7 @@ pub fn index_factory(
     let desc = description.as_ref();
     let description =
         CString::new(desc).map_err(|_| Error::InvalidDescription { desc: desc.into() })?;
-    rc!({ sys::faiss_index_factory(&mut inner, d as i32, description.as_ptr(), metric) })?;
+    rc!({ sys::faiss_index_factory(&mut inner, d as i32, description.as_ptr(), metric.into()) })?;
     let r = IndexImpl { inner };
     trace!(?r, "index_factory");
     Ok(r)

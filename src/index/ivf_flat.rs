@@ -2,8 +2,8 @@ use std::mem::forget;
 use std::ptr::null_mut;
 
 use crate::error::Result;
+use crate::index::ivf::IndexIVFTrait;
 use crate::index::{impl_index, IndexTrait};
-use crate::index_ivf::IndexIVFTrait;
 use crate::macros::rc;
 use crate::metric::MetricType;
 use faiss_next_sys as sys;
@@ -25,7 +25,13 @@ impl IndexIVFFlat {
     ) -> Result<Self> {
         let mut inner = null_mut();
         rc!({
-            sys::faiss_IndexIVFFlat_new_with_metric(&mut inner, quantizer.ptr(), d, nlist, metric)
+            sys::faiss_IndexIVFFlat_new_with_metric(
+                &mut inner,
+                quantizer.ptr(),
+                d,
+                nlist,
+                metric.into(),
+            )
         })?;
         let mut r = Self { inner };
         r.set_own_fields(true);

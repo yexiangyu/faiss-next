@@ -1,11 +1,24 @@
-use crate::metric::MetricType;
+pub mod clone;
+pub mod factory;
+pub mod flat;
+pub mod id_map;
+pub mod io;
+pub mod ivf;
+pub mod ivf_flat;
+pub mod lsh;
+pub mod pre_transform;
+pub mod replicas;
+pub mod scalar_quantizer;
+pub mod shards;
+
 use faiss_next_sys as sys;
 use tracing::*;
 
 use crate::{
-    aux_index_structures::{IDSelectorTrait, RangeSearchResult},
     error::Result,
+    implement::{id_selector::IDSelectorTrait, range_search_result::RangeSearchResult},
     macros::rc,
+    metric::MetricType,
 };
 use std::ptr::null_mut;
 pub use sys::FaissMetricType;
@@ -60,7 +73,7 @@ pub trait IndexTrait {
     }
 
     fn metric_type(&self) -> MetricType {
-        unsafe { sys::faiss_Index_metric_type(self.ptr()) }
+        unsafe { sys::faiss_Index_metric_type(self.ptr()).into() }
     }
     fn verbose(&self) -> bool {
         unsafe { sys::faiss_Index_verbose(self.ptr()) != 0 }
