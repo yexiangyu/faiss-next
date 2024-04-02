@@ -6,6 +6,9 @@ use crate::macros::rc;
 use faiss_next_sys as sys;
 use tracing::trace;
 
+/// Clone an index.
+/// ```rust
+/// ```
 pub fn clone_index(index: &impl IndexTrait) -> Result<*mut sys::FaissIndex> {
     let mut inner = null_mut();
     rc!({ sys::faiss_clone_index(index.ptr(), &mut inner) })?;

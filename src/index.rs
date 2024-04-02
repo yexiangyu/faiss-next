@@ -234,7 +234,7 @@ macro_rules! impl_index {
 
         impl Drop for $cls {
             fn drop(&mut self) {
-                tracing::trace!("drop {} inner={:?}", stringify!($cls), self.inner);
+                tracing::trace!(?self, "drop");
                 if !self.inner.is_null() {
                     unsafe { faiss_next_sys::faiss_Index_free(self.inner as *mut _) };
                 }
@@ -243,7 +243,7 @@ macro_rules! impl_index {
 
         impl std::fmt::Debug for $cls {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("IndexImpl")
+                f.debug_struct(stringify!($cls))
                     .field("inner", &self.inner)
                     .field("d", &self.d())
                     .field("is_trained", &self.is_trained())

@@ -158,6 +158,14 @@ macro_rules! impl_id_selector {
                 self.inner as *mut _
             }
         }
+
+        impl std::fmt::Debug for $cls {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_struct(stringify!($cls))
+                    .field("inner", &self.inner)
+                    .finish()
+            }
+        }
     };
 }
 
@@ -165,7 +173,7 @@ macro_rules! impl_drop {
     ($cls: ty, $free: ident) => {
         impl Drop for $cls {
             fn drop(&mut self) {
-                tracing::trace!("drop {} inner={:?}", stringify!($cls), self.inner);
+                tracing::trace!(?self, "drop");
                 unsafe { sys::$free(self.inner as *mut _) }
             }
         }
@@ -177,14 +185,6 @@ pub struct IDSelectorRange {
 }
 impl_drop!(IDSelectorRange, faiss_IDSelectorRange_free);
 impl_id_selector!(IDSelectorRange);
-
-impl std::fmt::Debug for IDSelectorRange {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IDSelectorRange")
-            .field("inner", &self.inner)
-            .finish()
-    }
-}
 
 impl IDSelectorRange {
     pub fn new(imin: i64, imax: i64) -> Result<Self> {
@@ -202,13 +202,13 @@ pub struct IDSelectorBatch {
 impl_drop!(IDSelectorBatch, faiss_IDSelector_free);
 impl_id_selector!(IDSelectorBatch);
 
-impl std::fmt::Debug for IDSelectorBatch {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("IDSelectorBatch")
-            .field("inner", &self.inner)
-            .finish()
-    }
-}
+// impl std::fmt::Debug for IDSelectorBatch {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.debug_struct("IDSelectorBatch")
+//             .field("inner", &self.inner)
+//             .finish()
+//     }
+// }
 
 impl IDSelectorBatch {
     pub fn new(ids: impl AsRef<[i64]>) -> Result<Self> {

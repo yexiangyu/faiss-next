@@ -15,14 +15,15 @@ pub struct IndexGpuImpl {
 impl_index!(IndexGpuImpl);
 
 impl IndexGpuImpl {
-    pub fn new<P>(
+    pub fn new<P, O>(
         providers: impl AsRef<[P]>,
         devices: impl AsRef<[i32]>,
         index: &impl IndexTrait,
-        options: Option<impl GpuClonerOptionsTrait>,
+        options: Option<O>,
     ) -> Result<Self>
     where
         P: GpuResourcesProviderTrait,
+        O: GpuClonerOptionsTrait,
     {
         let mut inner = null_mut();
         let providers = providers

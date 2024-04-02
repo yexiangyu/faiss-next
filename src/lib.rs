@@ -3,11 +3,10 @@ pub mod aux_index_structures;
 pub mod clone_index;
 pub mod clustering;
 pub mod error;
-#[cfg(feature = "gpu")]
-pub mod gpu;
 pub mod index;
 pub mod index_factory;
 pub mod index_flat;
+pub mod index_io;
 pub mod index_ivf;
 pub mod index_ivf_flat;
 pub mod index_lsh;
@@ -19,3 +18,16 @@ pub mod macros;
 pub mod meta_indexes;
 pub mod metric;
 pub mod vector_transform;
+
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
+pub mod prelude {
+    pub use super::aux_index_structures::DistanceComputerTrait;
+    pub use super::aux_index_structures::IDSelectorTrait;
+    pub use super::index::IndexTrait;
+    pub use super::index_flat::IndexFlatTrait;
+    pub use super::index_ivf::IndexIVFTrait;
+    pub use super::index_scalar_quantizer::IndexScalarQuantizerTrait;
+    pub use super::vector_transform::{LinearTransformTrait, VectorTransformTrait};
+}

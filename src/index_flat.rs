@@ -3,6 +3,7 @@ use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 
 use faiss_next_sys as sys;
+use tracing::trace;
 
 use crate::error::Result;
 use crate::index::{impl_index, IndexTrait};
@@ -60,13 +61,19 @@ impl IndexFlat {
     pub fn new(d: i64, metric: MetricType) -> Result<Self> {
         let mut inner = null_mut();
         rc!({ sys::faiss_IndexFlat_new_with(&mut inner, d, metric) })?;
+        trace!(?d, ?metric, "new IndexFlat inner={:?}", inner);
         Ok(Self { inner })
     }
 
     pub fn cast(index: impl IndexTrait) -> Self {
         let ptr = index.ptr();
-        forget(index);
         let inner = unsafe { sys::faiss_IndexFlat_cast(ptr) };
+        trace!(
+            "cast index={:?} to IndexFlat inner={:?}",
+            index.ptr(),
+            inner
+        );
+        forget(index);
         Self { inner }
     }
 }

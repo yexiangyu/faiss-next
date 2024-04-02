@@ -4,8 +4,11 @@ use std::{
     slice::from_raw_parts,
 };
 
-use crate::{error::Result, index::IndexTrait, macros::rc};
+use crate::error::Result;
+use crate::index::IndexTrait;
+use crate::macros::rc;
 use faiss_next_sys as sys;
+use tracing::trace;
 
 pub struct ParameterRange {
     inner: *mut sys::FaissParameterRange,
@@ -30,13 +33,32 @@ impl ParameterRange {
     }
 }
 
+impl std::fmt::Debug for ParameterRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParameterRange")
+            .field("inner", &self.inner)
+            .field("name", &self.name())
+            .finish()
+    }
+}
+
 pub struct ParameterSpace {
     inner: *mut sys::FaissParameterSpace,
+}
+
+impl std::fmt::Debug for ParameterSpace {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParameterSpace")
+            .field("inner", &self.inner)
+            .field("n_combinations", &self.n_combinations())
+            .finish()
+    }
 }
 
 impl Drop for ParameterSpace {
     fn drop(&mut self) {
         unsafe {
+            trace!(?self, "drop");
             sys::faiss_ParameterSpace_free(self.inner);
         }
     }
@@ -46,7 +68,9 @@ impl ParameterSpace {
     pub fn new() -> Result<Self> {
         let mut inner = null_mut();
         rc!({ sys::faiss_ParameterSpace_new(&mut inner) })?;
-        Ok(Self { inner })
+        let r = Self { inner };
+        trace!(?r, "new");
+        Ok(r)
     }
 
     pub fn n_combinations(&self) -> usize {

@@ -50,7 +50,7 @@ pub trait VectorTransformTrait {
     }
 }
 
-pub trait LinearTransform: VectorTransformTrait {
+pub trait LinearTransformTrait: VectorTransformTrait {
     fn transform_transpose(&self, y: impl AsRef<[f32]>, mut x: impl AsMut<[f32]>) {
         let n = y.as_ref().len() as i64 / self.d_in() as i64;
         unsafe {

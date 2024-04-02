@@ -1,5 +1,6 @@
 use faiss_next_sys as sys;
 use std::ptr::null_mut;
+use tracing::trace;
 
 use crate::error::Result;
 use crate::gpu::indices_options::IndicesOptions;
@@ -68,6 +69,7 @@ pub struct GpuClonerOptions {
 
 impl Drop for GpuClonerOptions {
     fn drop(&mut self) {
+        trace!("Dropping GpuClonerOptions inner={:?}", self.inner);
         unsafe { sys::faiss_GpuClonerOptions_free(self.inner) }
     }
 }
@@ -82,6 +84,7 @@ impl GpuClonerOptions {
     pub fn new() -> Result<Self> {
         let mut inner = null_mut();
         rc!({ sys::faiss_GpuClonerOptions_new(&mut inner) })?;
+        trace!("new GpuClonerOptions inner={:?}", inner);
         Ok(Self { inner })
     }
 }
@@ -92,6 +95,7 @@ pub struct GpuMultipleClonerOptions {
 
 impl Drop for GpuMultipleClonerOptions {
     fn drop(&mut self) {
+        trace!("drop GpuMultipleClonerOptions inner={:?}", self.inner);
         unsafe { sys::faiss_GpuMultipleClonerOptions_free(self.inner) }
     }
 }
@@ -105,6 +109,7 @@ impl GpuClonerOptionsTrait for GpuMultipleClonerOptions {
 impl GpuMultipleClonerOptions {
     pub fn new() -> Result<Self> {
         let mut inner = null_mut();
+        trace!("new GpuMultipleClonerOptions inner={:?}", inner);
         rc!({ sys::faiss_GpuMultipleClonerOptions_new(&mut inner) })?;
         Ok(Self { inner })
     }

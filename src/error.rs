@@ -7,6 +7,8 @@ pub enum Error {
     Faiss { code: i32, message: String },
     #[error("invalid description={}", .desc)]
     InvalidDescription { desc: String },
+    #[error("invalid path={}", .path)]
+    InvalidPath { path: String },
     #[error("not standard layout")]
     NotStandardLayout,
     #[error("invalid devices=[]")]

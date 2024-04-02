@@ -14,8 +14,14 @@ pub struct IndexImpl {
 
 impl_index!(IndexImpl);
 
+impl IndexImpl {
+    pub fn new(inner: *mut sys::FaissIndex) -> Self {
+        Self { inner }
+    }
+}
+
 pub fn index_factory(
-    d: i32,
+    d: usize,
     description: impl AsRef<str>,
     metric: MetricType,
 ) -> Result<IndexImpl> {
@@ -23,14 +29,10 @@ pub fn index_factory(
     let desc = description.as_ref();
     let description =
         CString::new(desc).map_err(|_| Error::InvalidDescription { desc: desc.into() })?;
-    rc!({ sys::faiss_index_factory(&mut inner, d, description.as_ptr(), metric) })?;
-    trace!(
-        "create IndexImpl inner={:?}, d={}, description={}",
-        inner,
-        d,
-        desc
-    );
-    Ok(IndexImpl { inner })
+    rc!({ sys::faiss_index_factory(&mut inner, d as i32, description.as_ptr(), metric) })?;
+    let r = IndexImpl { inner };
+    trace!(?r, "index_factory");
+    Ok(r)
 }
 
 #[cfg(test)]

@@ -26,8 +26,9 @@ impl Default for ClusteringParameters {
     fn default() -> Self {
         let mut inner = sys::FaissClusteringParameters::default();
         unsafe { sys::faiss_ClusteringParameters_init(&mut inner) };
-        trace!("create ClusterParameters, inner={:?}", inner);
-        Self { inner }
+        let r = Self { inner };
+        trace!(?r, "default");
+        r
     }
 }
 
@@ -51,7 +52,7 @@ pub struct Clustering {
 
 impl Drop for Clustering {
     fn drop(&mut self) {
-        trace!("drop Clustering inner={:?}", self.inner);
+        trace!(?self, "drop");
         unsafe { sys::faiss_Clustering_free(self.inner) }
     }
 }
