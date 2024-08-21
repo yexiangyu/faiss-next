@@ -1,15 +1,3 @@
-#![allow(unused_macros)]
-
-macro_rules! impl_faiss_drop {
-    ($klass: ident, $drop_fun: ident,  $inner: ty) => {
-        impl Drop for $klass {
-            fn drop(&mut self) {
-                unsafe { ffi::$drop_fun(self.inner) }
-            }
-        }
-    };
-}
-
 macro_rules! impl_faiss_setter {
     ($klass: ident, $setter: ident, $inner_setter: ident, $val: ident, $val_ty: ty) => {
         impl $klass {
@@ -103,6 +91,7 @@ macro_rules! impl_faiss_drop {
     ($klass: ident, $drop_fun: ident) => {
         impl Drop for $klass {
             fn drop(&mut self) {
+                tracing::trace!(?self, "dropping");
                 unsafe { faiss_next_sys::$drop_fun(self.inner) }
             }
         }

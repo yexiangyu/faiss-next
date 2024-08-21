@@ -44,6 +44,7 @@ pub trait FaissIndexFlatTrait: FaissIndexTrait {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissIndexFlat {
     inner: *mut ffi::FaissIndex,
 }
@@ -76,6 +77,7 @@ impl FaissIndexFlat {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissIndexFlatIP {
     inner: *mut ffi::FaissIndex,
 }
@@ -107,6 +109,7 @@ impl FaissIndexTrait for FaissIndexFlatIP {
 }
 impl FaissIndexFlatTrait for FaissIndexFlatIP {}
 
+#[derive(Debug)]
 pub struct FaissIndexFlatL2 {
     inner: *mut ffi::FaissIndex,
 }
@@ -138,10 +141,10 @@ impl FaissIndexTrait for FaissIndexFlatL2 {
 }
 impl FaissIndexFlatTrait for FaissIndexFlatL2 {}
 
+#[derive(Debug)]
 pub struct FaissIndexRefineFlat {
     inner: *mut ffi::FaissIndex,
 }
-
 impl_faiss_drop!(FaissIndexRefineFlat, faiss_IndexRefineFlat_free);
 impl FaissIndexTrait for FaissIndexRefineFlat {
     fn inner(&self) -> *mut ffi::FaissIndex {
@@ -185,6 +188,7 @@ impl FaissIndexRefineFlat {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissIndexFlat1D {
     inner: *mut ffi::FaissIndex,
 }

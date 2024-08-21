@@ -131,6 +131,7 @@ pub trait FaissIndexBinaryTrait {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissIndexBinaryOwned {
     pub inner: *mut ffi::FaissIndexBinary,
 }

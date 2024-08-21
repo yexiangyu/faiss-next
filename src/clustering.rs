@@ -40,6 +40,7 @@ impl FaissClusteringParameters {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissClustering {
     inner: *mut ffi::FaissClustering,
 }

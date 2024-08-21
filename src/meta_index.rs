@@ -9,6 +9,7 @@ use crate::{
     macros::*,
 };
 
+#[derive(Debug)]
 pub struct FaissIndexIDMap {
     inner: *mut ffi::FaissIndexIDMap,
 }
@@ -69,6 +70,7 @@ impl FaissIndexIDMap {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissIndexIDMap2 {
     inner: *mut ffi::FaissIndexIDMap2,
 }

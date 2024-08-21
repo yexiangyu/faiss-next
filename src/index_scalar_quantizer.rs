@@ -4,6 +4,7 @@ use crate::{error::*, index::FaissIndexTrait, macros::*};
 pub use ffi::FaissQuantizerType;
 use std::{mem::forget, ptr::null_mut};
 
+#[derive(Debug)]
 pub struct FaissIndexScalarQuantizer {
     inner: *mut ffi::FaissIndexScalarQuantizer,
 }
@@ -35,6 +36,7 @@ impl FaissIndexScalarQuantizer {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissIndexIVFScalarQuantizer {
     pub inner: *mut ffi::FaissIndexIVFScalarQuantizer,
 }

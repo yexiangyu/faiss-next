@@ -129,6 +129,7 @@ impl<'a, T> FaissIDSelectorTrait for FaissIDSelectorBorrowed<'a, T> {
 /// let sel = FaissIDSelectorRange::new(1, 10).unwrap();
 /// assert!(sel.is_member(5));
 /// ```
+#[derive(Debug)]
 pub struct FaissIDSelectorRange {
     pub inner: *mut ffi::FaissIDSelectorRange,
 }
@@ -285,6 +286,7 @@ impl FaissIDSelectorXOr {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissBufferList {
     inner: *mut ffi::FaissBufferList,
 }

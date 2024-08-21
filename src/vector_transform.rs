@@ -72,6 +72,7 @@ pub trait FaissVectorTransformTrait {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissRandomRotationMatrix {
     pub inner: *mut ffi::FaissVectorTransform,
 }
@@ -87,6 +88,7 @@ impl_faiss_new!(
     i32
 );
 
+#[derive(Debug)]
 pub struct FaissPCAMatrix {
     pub inner: *mut ffi::FaissVectorTransform,
 }
@@ -118,6 +120,7 @@ impl_faiss_getter!(
     i32
 );
 
+#[derive(Debug)]
 pub struct FaissITQMatrix {
     pub inner: *mut ffi::FaissVectorTransform,
 }
@@ -131,6 +134,7 @@ impl_faiss_new!(
     i32
 );
 
+#[derive(Debug)]
 pub struct FaissITQTransform {
     pub inner: *mut ffi::FaissVectorTransform,
 }
@@ -149,6 +153,7 @@ impl_faiss_new!(
 );
 impl_faiss_getter!(FaissITQTransform, do_pca, faiss_ITQTransform_do_pca, i32);
 
+#[derive(Debug)]
 pub struct FaissOPQMatrix {
     pub inner: *mut ffi::FaissVectorTransform,
 }
@@ -190,6 +195,7 @@ impl_faiss_setter!(
     i32
 );
 
+#[derive(Debug)]
 pub struct FaissRemapDimensionsTransform {
     pub inner: *mut ffi::FaissVectorTransform,
 }
@@ -210,6 +216,7 @@ impl_faiss_new!(
     i32
 );
 
+#[derive(Debug)]
 pub struct FaissNormalizationTransform {
     pub inner: *mut ffi::FaissVectorTransform,
 }
@@ -234,6 +241,7 @@ impl_faiss_getter!(
     f32
 );
 
+#[derive(Debug)]
 pub struct FaissCenteringTransform {
     pub inner: *mut ffi::FaissVectorTransform,
 }

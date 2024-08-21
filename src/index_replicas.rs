@@ -3,6 +3,7 @@ use std::mem::forget;
 use crate::{error::*, index::FaissIndexBorrowed, macros::*, traits::FaissIndexTrait};
 use faiss_next_sys as ffi;
 
+#[derive(Debug)]
 pub struct FaissIndexReplicas {
     inner: *mut ffi::FaissIndexReplicas,
 }

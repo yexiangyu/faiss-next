@@ -11,6 +11,7 @@ pub mod index_io;
 pub mod index_ivf;
 pub mod index_ivf_flat;
 pub mod index_lsh;
+pub mod index_pre_transform;
 pub mod index_replicas;
 pub mod index_scalar_quantizer;
 pub mod index_shards;

@@ -14,6 +14,7 @@ pub trait FaissSearchParametersTrait {
     fn inner(&self) -> *mut ffi::FaissSearchParameters;
 }
 
+#[derive(Debug)]
 pub struct FaissSearchParametersImpl {
     pub inner: *mut ffi::FaissSearchParameters,
 }
@@ -271,6 +272,7 @@ impl<'a, T> FaissIndexTrait for FaissIndexBorrowed<'a, T> {
     }
 }
 
+#[derive(Debug)]
 pub struct FaissIndexOwned {
     pub inner: *mut ffi::FaissIndex,
 }
