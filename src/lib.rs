@@ -45,12 +45,14 @@ pub mod utils_distances;
 /// `c_api/VectorTransform_c.h`
 pub mod vector_transform;
 
-#[cfg(feature = "cuda")]
+#[cfg(all(feature = "cuda", not(target_os = "macos")))]
 /// `CUDA`
 pub mod cuda;
 
 pub mod prelude {
+    pub use crate::impl_aux_index_structure::*;
     pub use crate::index::FaissMetricType;
     pub use crate::index_factory::faiss_index_factory;
+    pub use crate::index_flat::*;
     pub use crate::traits::*;
 }

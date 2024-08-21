@@ -2,6 +2,28 @@ use faiss_next_sys::{self as ffi, FaissMetricType};
 
 use crate::{error::*, index::FaissIndexOwned};
 
+/// build index with factory function
+/// ```rust
+/// use faiss_next::prelude::*;
+/// use itertools::Itertools;
+/// use ndarray::{Array2, s};
+/// use ndarray_rand::{rand_distr::Uniform, RandomExt};
+///
+/// let index = faiss_index_factory(128, "Flat", FaissMetricType::METRIC_L2).unwrap();
+/// let mut index = FaissIndexFlat::downcast(index).unwrap();
+/// let base = Array2::<f32>::random((1024, 128), Uniform::new(-1.0, 1.0));
+///
+/// let query = base.slice(s![42..43, ..]);
+///
+/// index.add(base.as_slice().unwrap()).unwrap();
+///
+/// let mut distances = vec![0.0];
+/// let mut labels = vec![-1];
+///
+/// index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels).unwrap();
+/// assert_eq!(labels, &[42]);
+/// assert_eq!(index.xb().len(), 1024 * 128);
+/// ```
 pub fn faiss_index_factory(
     d: i32,
     description: impl AsRef<str>,
@@ -14,32 +36,4 @@ pub fn faiss_index_factory(
         ffi::faiss_index_factory(&mut index, d, description.as_ptr(), metric)
     })?;
     Ok(FaissIndexOwned { inner: index })
-}
-
-#[cfg(test)]
-#[test]
-fn test_index_ok() -> Result<()> {
-    use crate::traits::FaissIndexTrait;
-    use itertools::Itertools;
-    use ndarray::Array2;
-    use ndarray_rand::{rand_distr::Uniform, RandomExt};
-
-    let _ = dotenv::dotenv();
-    let _ = tracing_subscriber::fmt::try_init();
-    let d = 128;
-    let n = 1024;
-
-    let base = Array2::<f32>::random((n, d), Uniform::new(-1.0, 1.0));
-    let query = base.slice(ndarray::s![42..43, ..]);
-
-    let mut index = faiss_index_factory(d as i32, "Flat,IDMap", FaissMetricType::METRIC_L2)?;
-    index.add_with_ids(
-        base.as_slice().unwrap(),
-        (100..100 + n as i64).collect_vec(),
-    )?;
-    let mut distances = vec![0.0];
-    let mut labels = vec![-1];
-    index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels)?;
-    tracing::info!(?distances, ?labels);
-    Ok(())
 }

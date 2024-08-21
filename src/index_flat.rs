@@ -44,6 +44,27 @@ pub trait FaissIndexFlatTrait: FaissIndexTrait {
     }
 }
 
+/// FaissIndexFlatIP
+/// ```rust
+/// use faiss_next::prelude::*;
+/// use ndarray::{Array2, s};
+/// use ndarray_rand::{rand_distr::Uniform, RandomExt};
+///
+/// let mut index = FaissIndexFlat::new(128, FaissMetricType::METRIC_L2).unwrap();
+///
+/// let base = Array2::<f32>::random((1024, 128), Uniform::new(-1.0, 1.0));
+///
+/// let query = base.slice(s![42..43, ..]);
+///
+/// index.add(base.as_slice().unwrap()).unwrap();
+///
+/// let mut distances = vec![0.0];
+/// let mut labels = vec![-1];
+///
+/// index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels).unwrap();
+/// assert_eq!(labels, &[42]);
+/// assert_eq!(index.xb().len(), 1024 * 128);
+/// ```
 #[derive(Debug)]
 pub struct FaissIndexFlat {
     inner: *mut ffi::FaissIndex,
@@ -57,13 +78,13 @@ impl FaissIndexTrait for FaissIndexFlat {
 impl FaissIndexFlatTrait for FaissIndexFlat {}
 
 impl FaissIndexFlat {
-    pub fn new() -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexFlat_new(&mut inner) })?;
-        Ok(Self { inner })
-    }
+    // pub fn new() -> Result<Self> {
+    //     let mut inner = null_mut();
+    //     faiss_rc(unsafe { ffi::faiss_IndexFlat_new(&mut inner) })?;
+    //     Ok(Self { inner })
+    // }
 
-    pub fn new_with(d: i64, metric: FaissMetricType) -> Result<Self> {
+    pub fn new(d: i64, metric: FaissMetricType) -> Result<Self> {
         let mut inner = null_mut();
         faiss_rc(unsafe { ffi::faiss_IndexFlat_new_with(&mut inner, d, metric) })?;
         Ok(Self { inner })
@@ -77,19 +98,39 @@ impl FaissIndexFlat {
     }
 }
 
+/// FaissIndexFlatIP
+/// ```rust
+/// use faiss_next::prelude::*;
+/// use ndarray::{Array2, s};
+/// use ndarray_rand::{rand_distr::Uniform, RandomExt};
+///
+/// let mut index = FaissIndexFlatIP::new(128).unwrap();
+///
+/// let base = Array2::<f32>::random((1024, 128), Uniform::new(-1.0, 1.0));
+///
+/// let query = base.slice(s![42..43, ..]);
+///
+/// index.add(base.as_slice().unwrap()).unwrap();
+///
+/// let mut distances = vec![0.0];
+/// let mut labels = vec![-1];
+///
+/// index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels).unwrap();
+/// assert_eq!(labels, &[42]);
+/// ```
 #[derive(Debug)]
 pub struct FaissIndexFlatIP {
     inner: *mut ffi::FaissIndex,
 }
 impl_faiss_drop!(FaissIndexFlatIP, faiss_IndexFlatIP_free);
 impl FaissIndexFlatIP {
-    pub fn new() -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexFlatIP_new(&mut inner) })?;
-        Ok(Self { inner })
-    }
+    // pub fn new() -> Result<Self> {
+    //     let mut inner = null_mut();
+    //     faiss_rc(unsafe { ffi::faiss_IndexFlatIP_new(&mut inner) })?;
+    //     Ok(Self { inner })
+    // }
 
-    pub fn new_with(d: i64) -> Result<Self> {
+    pub fn new(d: i64) -> Result<Self> {
         let mut inner = null_mut();
         faiss_rc(unsafe { ffi::faiss_IndexFlatIP_new_with(&mut inner, d) })?;
         Ok(Self { inner })
@@ -109,19 +150,39 @@ impl FaissIndexTrait for FaissIndexFlatIP {
 }
 impl FaissIndexFlatTrait for FaissIndexFlatIP {}
 
+/// FaissIndexFlatL2
+/// ```rust
+/// use faiss_next::prelude::*;
+/// use ndarray::{Array2, s};
+/// use ndarray_rand::{rand_distr::Uniform, RandomExt};
+///
+/// let mut index = FaissIndexFlatL2::new(128).unwrap();
+///
+/// let base = Array2::<f32>::random((1024, 128), Uniform::new(-1.0, 1.0));
+///
+/// let query = base.slice(s![42..43, ..]);
+///
+/// index.add(base.as_slice().unwrap()).unwrap();
+///
+/// let mut distances = vec![0.0];
+/// let mut labels = vec![-1];
+///
+/// index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels).unwrap();
+/// assert_eq!(labels, &[42]);
+/// ```
 #[derive(Debug)]
 pub struct FaissIndexFlatL2 {
     inner: *mut ffi::FaissIndex,
 }
 impl_faiss_drop!(FaissIndexFlatL2, faiss_IndexFlatL2_free);
 impl FaissIndexFlatL2 {
-    pub fn new() -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexFlatL2_new(&mut inner) })?;
-        Ok(Self { inner })
-    }
+    // pub fn new() -> Result<Self> {
+    //     let mut inner = null_mut();
+    //     faiss_rc(unsafe { ffi::faiss_IndexFlatL2_new(&mut inner) })?;
+    //     Ok(Self { inner })
+    // }
 
-    pub fn new_with(d: i64) -> Result<Self> {
+    pub fn new(d: i64) -> Result<Self> {
         let mut inner = null_mut();
         faiss_rc(unsafe { ffi::faiss_IndexFlatL2_new_with(&mut inner, d) })?;
         Ok(Self { inner })

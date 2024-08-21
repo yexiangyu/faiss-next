@@ -94,10 +94,13 @@ fn create_bindgen() {
 
     #[cfg(feature = "cuda")]
     {
-        let cuda_dir = cuda_dir().unwrap();
-        builder = builder
-            .clang_arg("-DUSE_CUDA")
-            .clang_arg(format!("-I{}", cuda_dir.join("include").to_str().unwrap()));
+        #[cfg(not(target_os = "macos"))]
+        {
+            let cuda_dir = cuda_dir().unwrap();
+            builder = builder
+                .clang_arg("-DUSE_CUDA")
+                .clang_arg(format!("-I{}", cuda_dir.join("include").to_str().unwrap()));
+        }
     }
 
     builder

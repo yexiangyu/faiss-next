@@ -10,7 +10,7 @@ use crate::{
 pub use ffi::FaissMetricType;
 use std::ptr::null_mut;
 
-#[cfg(feature = "cuda")]
+#[cfg(all(feature = "cuda", not(target_os = "macos")))]
 use crate::cuda::prelude::*;
 
 pub trait FaissSearchParametersTrait {
@@ -43,7 +43,7 @@ impl FaissSearchParametersTrait for FaissSearchParametersImpl {
 }
 
 pub trait FaissIndexTrait {
-    #[cfg(feature = "cuda")]
+    #[cfg(all(feature = "cuda", not(target_os = "macos")))]
     fn to_gpu(
         &self,
         provider: impl FaissGpuResourcesProviderTrait,
@@ -56,7 +56,7 @@ pub trait FaissIndexTrait {
         Ok(FaissGpuIndexOwned { inner })
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(all(feature = "cuda", not(target_os = "macos")))]
     fn to_gpu_with_options(
         &self,
         provider: impl FaissGpuResourcesProviderTrait,
@@ -76,7 +76,7 @@ pub trait FaissIndexTrait {
         Ok(FaissGpuIndexOwned { inner })
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(all(feature = "cuda", not(target_os = "macos")))]
     fn to_gpu_multiple<P: FaissGpuResourcesProviderTrait>(
         &self,
         providers: impl IntoIterator<Item = P>,
@@ -96,7 +96,7 @@ pub trait FaissIndexTrait {
         Ok(FaissGpuIndexOwned { inner })
     }
 
-    #[cfg(feature = "cuda")]
+    #[cfg(all(feature = "cuda", not(target_os = "macos")))]
     fn to_gpu_multiple_with_options<P: FaissGpuResourcesProviderTrait>(
         &self,
         providers: impl IntoIterator<Item = P>,
