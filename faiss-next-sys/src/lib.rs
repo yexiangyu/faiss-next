@@ -1,11 +1,3 @@
-#![doc = include_str!("../README.md")]
 #![allow(non_camel_case_types)]
-
-#[cfg(target_os = "macos")]
-include!("macos/bindings.rs");
-
-#[cfg(all(not(feature = "gpu"), target_os = "linux"))]
-include!("linux/bindings.rs");
-
-#[cfg(all(feature = "gpu", target_os = "linux"))]
-include!("linux/bindings_gpu.rs");
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+include!("macos/aarch64.rs");

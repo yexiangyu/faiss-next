@@ -1,175 +1,194 @@
-use crate::{error::Result, index::common::FaissIndexTrait, rc};
-use faiss_next_sys as sys;
-use std::ptr::{addr_of, addr_of_mut, null_mut};
+use crate::{error::*, index::FaissIndexTrait, macros::*};
+use faiss_next_sys as ffi;
+use itertools::Itertools;
+use std::{
+    ops::{Deref, DerefMut},
+    ptr::null_mut,
+    slice::from_raw_parts,
+};
+
+// pub use ffi::FaissClusteringParameters;
 
 pub struct FaissClusteringParameters {
-    pub inner: sys::FaissClusteringParameters,
+    pub inner: ffi::FaissClusteringParameters,
 }
 
-impl Default for FaissClusteringParameters {
-    fn default() -> Self {
-        Self::new()
+impl Deref for FaissClusteringParameters {
+    type Target = ffi::FaissClusteringParameters;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for FaissClusteringParameters {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }
 
 impl FaissClusteringParameters {
     pub fn new() -> Self {
-        let inner = sys::FaissClusteringParameters::default();
-        let mut r = Self { inner };
-        unsafe { sys::faiss_ClusteringParameters_init(addr_of_mut!(r.inner)) };
-        r
+        let mut inner = ffi::FaissClusteringParameters::default();
+        unsafe { ffi::faiss_ClusteringParameters_init(&mut inner) };
+        Self { inner }
     }
 }
 
 pub struct FaissClustering {
-    inner: *mut sys::FaissClustering,
+    inner: *mut ffi::FaissClustering,
 }
+impl_faiss_getter!(FaissClustering, niter, faiss_Clustering_niter, i32);
+impl_faiss_getter!(FaissClustering, nredo, faiss_Clustering_nredo, i32);
+impl_faiss_getter!(FaissClustering, verbose, faiss_Clustering_verbose, i32);
+impl_faiss_getter!(FaissClustering, spherical, faiss_Clustering_spherical, i32);
+impl_faiss_getter!(
+    FaissClustering,
+    int_centroids,
+    faiss_Clustering_int_centroids,
+    i32
+);
+impl_faiss_getter!(
+    FaissClustering,
+    update_index,
+    faiss_Clustering_update_index,
+    i32
+);
+impl_faiss_getter!(
+    FaissClustering,
+    frozen_centroids,
+    faiss_Clustering_frozen_centroids,
+    i32
+);
+impl_faiss_getter!(
+    FaissClustering,
+    min_points_per_centroid,
+    faiss_Clustering_min_points_per_centroid,
+    i32
+);
+impl_faiss_getter!(
+    FaissClustering,
+    max_points_per_centroid,
+    faiss_Clustering_max_points_per_centroid,
+    i32
+);
 
-impl Drop for FaissClustering {
-    fn drop(&mut self) {
-        unsafe { sys::faiss_Clustering_free(self.inner) }
-    }
-}
-
+impl_faiss_getter!(FaissClustering, seed, faiss_Clustering_seed, i32);
+impl_faiss_getter!(
+    FaissClustering,
+    decode_block_size,
+    faiss_Clustering_decode_block_size,
+    usize
+);
+impl_faiss_getter!(FaissClustering, d, faiss_Clustering_d, usize);
+impl_faiss_getter!(FaissClustering, k, faiss_Clustering_k, usize);
 impl FaissClustering {
-    pub fn niter(&self) -> i32 {
-        unsafe { sys::faiss_Clustering_niter(self.inner) }
-    }
-
-    pub fn nredo(&self) -> i32 {
-        unsafe { sys::faiss_Clustering_nredo(self.inner) }
-    }
-
-    pub fn verbose(&self) -> bool {
-        unsafe { sys::faiss_Clustering_verbose(self.inner) != 0 }
-    }
-
-    pub fn spherical(&self) -> bool {
-        unsafe { sys::faiss_Clustering_spherical(self.inner) != 0 }
-    }
-
-    pub fn int_centroids(&self) -> bool {
-        unsafe { sys::faiss_Clustering_int_centroids(self.inner) != 0 }
-    }
-
-    pub fn udpate_index(&self) -> bool {
-        unsafe { sys::faiss_Clustering_update_index(self.inner) != 0 }
-    }
-
-    pub fn frozen_centroids(&self) -> bool {
-        unsafe { sys::faiss_Clustering_frozen_centroids(self.inner) != 0 }
-    }
-
-    pub fn min_points_per_centroid(&self) -> i32 {
-        unsafe { sys::faiss_Clustering_min_points_per_centroid(self.inner) }
-    }
-
-    pub fn max_points_per_centroid(&self) -> i32 {
-        unsafe { sys::faiss_Clustering_max_points_per_centroid(self.inner) }
-    }
-
-    pub fn seed(&self) -> i32 {
-        unsafe { sys::faiss_Clustering_seed(self.inner) }
-    }
-
-    pub fn decode_block_size(&self) -> usize {
-        unsafe { sys::faiss_Clustering_decode_block_size(self.inner) }
-    }
-
-    pub fn d(&self) -> usize {
-        unsafe { sys::faiss_Clustering_d(self.inner) }
-    }
-
-    pub fn k(&self) -> usize {
-        unsafe { sys::faiss_Clustering_k(self.inner) }
-    }
-
-    pub fn centroids(&self) -> Vec<&[f32]> {
-        let mut data = null_mut();
+    pub fn centroids(&self) -> &[f32] {
+        let mut centroid = null_mut();
         let mut size = 0usize;
-        unsafe {
-            sys::faiss_Clustering_centroids(self.inner, addr_of_mut!(data), addr_of_mut!(size))
-        };
-        let data = unsafe { std::slice::from_raw_parts(data, size) };
-        data.chunks(self.d()).collect()
+        unsafe { ffi::faiss_Clustering_centroids(self.inner, &mut centroid, &mut size) };
+        unsafe { from_raw_parts(centroid, size) }
     }
-
-    pub fn iteration_stats(&self) -> &[FaissClusteringIterationStats] {
-        let mut data = null_mut();
+    pub fn iteration_stats(&self) -> Vec<FaissClusteringIterationStats> {
+        let mut stats = null_mut();
         let mut size = 0usize;
-        unsafe {
-            sys::faiss_Clustering_iteration_stats(
-                self.inner,
-                addr_of_mut!(data),
-                addr_of_mut!(size),
-            )
-        };
-        let data = unsafe { std::slice::from_raw_parts(data, size) };
-        unsafe {
-            std::slice::from_raw_parts(data.as_ptr() as *const FaissClusteringIterationStats, size)
-        }
+        unsafe { ffi::faiss_Clustering_iteration_stats(self.inner, &mut stats, &mut size) };
+        (0..size)
+            .map(|i| FaissClusteringIterationStats {
+                inner: unsafe { stats.add(i) },
+            })
+            .collect_vec()
     }
-
-    pub fn new(d: i32, k: i32) -> Result<Self> {
-        let mut inner = null_mut();
-        rc!({ sys::faiss_Clustering_new(addr_of_mut!(inner), d, k) })?;
-        Ok(Self { inner })
-    }
-
     pub fn new_with_params(d: i32, k: i32, params: &FaissClusteringParameters) -> Result<Self> {
         let mut inner = null_mut();
-        rc!({
-            sys::faiss_Clustering_new_with_params(addr_of_mut!(inner), d, k, addr_of!(params.inner))
+        crate::error::faiss_rc(unsafe {
+            ffi::faiss_Clustering_new_with_params(&mut inner, d, k, &params.inner)
         })?;
         Ok(Self { inner })
     }
-
-    pub fn train(&mut self, data: &[f32], index: &mut impl FaissIndexTrait) -> Result<()> {
-        let n = data.len() as i64 / self.d() as i64;
-        rc!({ sys::faiss_Clustering_train(self.inner, n, data.as_ptr(), index.inner()) })?;
-        Ok(())
+    pub fn train(&mut self, x: impl AsRef<[f32]>, index: &mut impl FaissIndexTrait) -> Result<()> {
+        let n = x.as_ref().len() as i64 / self.d() as i64;
+        faiss_rc(unsafe {
+            ffi::faiss_Clustering_train(self.inner, n, x.as_ref().as_ptr(), index.inner())
+        })
     }
 }
+impl_faiss_new!(
+    FaissClustering,
+    new,
+    FaissClustering,
+    faiss_Clustering_new,
+    d,
+    i32,
+    k,
+    i32
+);
+impl_faiss_new!(
+    FaissClustering,
+    raw_new_with_params,
+    FaissClustering,
+    faiss_Clustering_new_with_params,
+    d,
+    i32,
+    k,
+    i32,
+    params,
+    *const ffi::FaissClusteringParameters
+);
+impl_faiss_drop!(FaissClustering, faiss_Clustering_free);
 
-pub fn faiss_kmeans_clustering(data: &[f32], d: usize, k: usize) -> Result<(Vec<Vec<f32>>, f32)> {
-    let n = data.len() / d;
-    let mut centroids = vec![0.0f32; d * k];
+pub struct FaissClusteringIterationStats {
+    pub inner: *mut ffi::FaissClusteringIterationStats,
+}
+impl_faiss_getter!(
+    FaissClusteringIterationStats,
+    obj,
+    faiss_ClusteringIterationStats_obj,
+    f32
+);
+impl_faiss_getter!(
+    FaissClusteringIterationStats,
+    time,
+    faiss_ClusteringIterationStats_time,
+    f64
+);
+impl_faiss_getter!(
+    FaissClusteringIterationStats,
+    time_search,
+    faiss_ClusteringIterationStats_time_search,
+    f64
+);
+impl_faiss_getter!(
+    FaissClusteringIterationStats,
+    imbalance_factor,
+    faiss_ClusteringIterationStats_imbalance_factor,
+    f64
+);
+impl_faiss_getter!(
+    FaissClusteringIterationStats,
+    nsplit,
+    faiss_ClusteringIterationStats_nsplit,
+    i32
+);
+
+pub fn faiss_kmeans_clustering(
+    d: usize,
+    x: impl AsRef<[f32]>,
+    mut centroids: impl AsMut<[f32]>,
+) -> Result<f32> {
+    assert_eq!(x.as_ref().len() % d, 0);
+    let n = x.as_ref().len() / d;
+    let k = centroids.as_mut().len() / d;
     let mut q_error = 0.0f32;
-    rc!({
-        sys::faiss_kmeans_clustering(
+    faiss_rc(unsafe {
+        ffi::faiss_kmeans_clustering(
             d,
             n,
             k,
-            data.as_ptr(),
-            centroids.as_mut_ptr(),
-            addr_of_mut!(q_error),
+            x.as_ref().as_ptr(),
+            centroids.as_mut().as_mut_ptr(),
+            &mut q_error,
         )
     })?;
-    Ok((centroids.chunks(d).map(|c| c.to_vec()).collect(), q_error))
-}
-
-pub struct FaissClusteringIterationStats {
-    inner: *mut sys::FaissClusteringIterationStats,
-}
-
-impl FaissClusteringIterationStats {
-    pub fn obj(&self) -> f32 {
-        unsafe { sys::faiss_ClusteringIterationStats_obj(self.inner) }
-    }
-
-    pub fn time(&self) -> f64 {
-        unsafe { sys::faiss_ClusteringIterationStats_time(self.inner) }
-    }
-
-    pub fn time_search(&self) -> f64 {
-        unsafe { sys::faiss_ClusteringIterationStats_time_search(self.inner) }
-    }
-
-    pub fn imbalance_factor(&self) -> f64 {
-        unsafe { sys::faiss_ClusteringIterationStats_imbalance_factor(self.inner) }
-    }
-
-    pub fn nsplit(&self) -> i32 {
-        unsafe { sys::faiss_ClusteringIterationStats_nsplit(self.inner) }
-    }
+    Ok(q_error)
 }

@@ -1,25 +1,27 @@
+use faiss_next_sys as ffi;
+use std::ffi::CStr;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("rc={}, message={}", .code, .message)]
-    FaissError { code: i32, message: String },
-    #[error("invalid index description")]
-    InvalidIndexDescription,
-    #[error("invalid combination name")]
-    InvalidCombinationName,
-    #[error("invalid index parameters")]
-    InvalidIndexParameters,
-    #[error("downcast index failure")]
-    DowncastFailure,
-}
-
-impl From<i32> for Error {
-    fn from(code: i32) -> Self {
-        let message = unsafe {
-            let c_str = std::ffi::CStr::from_ptr(faiss_next_sys::faiss_get_last_error());
-            c_str.to_string_lossy().into_owned()
-        };
-        Error::FaissError { code, message }
-    }
+    #[error("code={}, message={}", .code, .message)]
+    FaissInner { code: i32, message: String },
+    #[error("null filename")]
+    NullFilename(#[from] std::ffi::NulError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+const OK: i32 = ffi::FaissErrorCode::OK as i32;
+
+pub fn faiss_rc(code: i32) -> Result<()> {
+    match code {
+        OK => Ok(()),
+        _ => {
+            let c_str = unsafe { CStr::from_ptr(ffi::faiss_get_last_error()) };
+            Err(Error::FaissInner {
+                code,
+                message: c_str.to_str().unwrap_or("unknown error message").into(),
+            })
+        }
+    }
+}

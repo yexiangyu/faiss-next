@@ -2,6 +2,7 @@
 # will have compiled files and executables
 debug/
 target/
+bak/
 
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
@@ -19,6 +20,13 @@ bak/
 # Added by cargo
 
 /target
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+#/target
 
 
 # Added by cargo
