@@ -69,7 +69,12 @@ fn create_bindgen() {
 
     std::fs::create_dir_all(&output_dir).unwrap();
 
-    let output_bindings = output_dir.join(format!("{arch}.rs"));
+    let mut output_bindings = output_dir.join(format!("{arch}.rs"));
+
+    #[cfg(feature = "cuda")]
+    {
+        output_bindings = output_dir.join(format!("{arch}_cuda.rs"));
+    }
 
     let mut builder = bindgen::builder()
         .header("faissw.h")
@@ -87,11 +92,31 @@ fn create_bindgen() {
         builder = builder.clang_arg(format!("-I{}", include_dir.to_str().unwrap()));
     }
 
+    #[cfg(feature = "cuda")]
+    {
+        let cuda_dir = cuda_dir().unwrap();
+        builder = builder
+            .clang_arg("-DUSE_CUDA")
+            .clang_arg(format!("-I{}", cuda_dir.join("include").to_str().unwrap()));
+    }
+
     builder
         .generate()
         .expect("unable to generate bindings")
         .write_to_file(output_bindings)
         .expect("unable to write bindings");
+}
+
+fn cuda_dir() -> Option<std::path::PathBuf> {
+    #[cfg(target_os = "linux")]
+    {
+        let cuda = std::path::PathBuf::from("/usr/local/cuda");
+        if cuda.exists() {
+            return Some(cuda);
+        }
+    }
+
+    None
 }
 
 fn faiss_dir() -> Option<std::path::PathBuf> {

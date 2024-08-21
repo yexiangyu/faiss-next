@@ -10,6 +10,9 @@ use crate::{
 pub use ffi::FaissMetricType;
 use std::ptr::null_mut;
 
+#[cfg(feature = "cuda")]
+use crate::cuda::prelude::*;
+
 pub trait FaissSearchParametersTrait {
     fn inner(&self) -> *mut ffi::FaissSearchParameters;
 }
@@ -40,6 +43,82 @@ impl FaissSearchParametersTrait for FaissSearchParametersImpl {
 }
 
 pub trait FaissIndexTrait {
+    #[cfg(feature = "cuda")]
+    fn to_gpu(
+        &self,
+        provider: impl FaissGpuResourcesProviderTrait,
+        device: i32,
+    ) -> Result<FaissGpuIndexOwned> {
+        let mut inner = null_mut();
+        faiss_rc(unsafe {
+            ffi::faiss_index_cpu_to_gpu(provider.inner(), device, self.inner(), &mut inner)
+        })?;
+        Ok(FaissGpuIndexOwned { inner })
+    }
+
+    #[cfg(feature = "cuda")]
+    fn to_gpu_with_options(
+        &self,
+        provider: impl FaissGpuResourcesProviderTrait,
+        options: impl FaissGpuClonerOptionsTrait,
+        device: i32,
+    ) -> Result<FaissGpuIndexOwned> {
+        let mut inner = null_mut();
+        faiss_rc(unsafe {
+            ffi::faiss_index_cpu_to_gpu_with_options(
+                provider.inner(),
+                device,
+                self.inner(),
+                options.inner(),
+                &mut inner,
+            )
+        })?;
+        Ok(FaissGpuIndexOwned { inner })
+    }
+
+    #[cfg(feature = "cuda")]
+    fn to_gpu_multiple<P: FaissGpuResourcesProviderTrait>(
+        &self,
+        providers: impl IntoIterator<Item = P>,
+        devices: impl AsRef<[i32]>,
+    ) -> Result<FaissGpuIndexOwned> {
+        let mut inner = null_mut();
+        let providers = providers.into_iter().map(|p| p.inner()).collect::<Vec<_>>();
+        faiss_rc(unsafe {
+            ffi::faiss_index_cpu_to_gpu_multiple(
+                providers.as_ptr(),
+                devices.as_ref().as_ptr(),
+                devices.as_ref().len(),
+                self.inner(),
+                &mut inner,
+            )
+        })?;
+        Ok(FaissGpuIndexOwned { inner })
+    }
+
+    #[cfg(feature = "cuda")]
+    fn to_gpu_multiple_with_options<P: FaissGpuResourcesProviderTrait>(
+        &self,
+        providers: impl IntoIterator<Item = P>,
+        devices: impl AsRef<[i32]>,
+        options: FaissGpuMultipleClonerOptions,
+    ) -> Result<FaissGpuIndexOwned> {
+        let mut inner = null_mut();
+        let providers = providers.into_iter().map(|p| p.inner()).collect::<Vec<_>>();
+        faiss_rc(unsafe {
+            ffi::faiss_index_cpu_to_gpu_multiple_with_options(
+                providers.as_ptr(),
+                providers.len(),
+                devices.as_ref().as_ptr(),
+                devices.as_ref().len(),
+                self.inner(),
+                options.inner,
+                &mut inner,
+            )
+        })?;
+        Ok(FaissGpuIndexOwned { inner })
+    }
+
     fn inner(&self) -> *mut ffi::FaissIndex;
 
     fn clone(&self) -> Result<FaissIndexOwned> {

@@ -2,7 +2,7 @@
 
 - `faiss-next` is a rust binding for `facebookresearch/faiss` c_api use `bindgen`
 - support `facebookresearch/faiss` version `v1.8.0`, other version ***NOT*** verified.
-- only shared library: `libfaiss.[so|dylib]`, `libfaiss_c.[so|dylib]` or `faiss.dll`, `faiss_c.dll` is supported. static linking with `*.a` is a painful experience with 3rd library dependency with `mkl` or `cuda`.
+- only shared library: `libfaiss.[so|dylib]`, `libfaiss_c.[so|dylib]` or `faiss.dll`, `faiss_c.dll` is supported. Static linking with `*.a` is a painful experience with 3rd library dependency with `mkl` or `cuda`.
 - current status of implemenetation on different platform: 
 
 | OS      | Arch          | Available |
@@ -13,6 +13,9 @@
 | Linux   | x86_64 + cuda | no        |
 | Windows | x86_64        | no        |
 | Windows | x86_64 + cuda | no        |
+
+- TODO: 
+    - add extra api not avaible in `c_api` by `cxx-rs`.
 
 ## pre-requirement
 
@@ -41,7 +44,18 @@
       - build `libfaiss.dylib` by run `cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build` 
       - copy `libfaiss_c.dylib` to `/opt/homebrew/opt/faiss/lib`
       - linking path search will done automatically by `build.rs` in `faiss-next-sys` crate on `MacOS`.
-    - On `Linux`, just follow [official guide](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md) to build shared library.
+    - On `Linux`, just follow [official guide](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md) to build shared library or:
+        ```shell
+
+        # cd faiss source tree
+        cd faiss
+
+        # configure
+        cmake -B build -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DFAISS_ENABLE_GPU=ON -DFAISS_ENABLE_PYTHON=OFF -DBUILD_TESTING=OFF
+
+        # build
+        cd build && make -j && cd .. && sudo cmake --install . && sudo cp c_api/libfaiss_c.so /usr/local/lib
+        ```
     - On `Windows` (TODO)
 
 ## Generate bindings
