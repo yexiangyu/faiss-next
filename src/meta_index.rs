@@ -46,14 +46,14 @@ impl FaissIndexIDMap {
         let mut size = 0;
         let mut ptr = null_mut();
         unsafe { ffi::faiss_IndexIDMap_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts(ptr, size as usize) }
+        unsafe { std::slice::from_raw_parts(ptr, size) }
     }
 
-    pub fn id_map_mut(&self) -> &mut [i64] {
+    pub fn id_map_mut(&mut self) -> &mut [i64] {
         let mut size = 0;
         let mut ptr = null_mut();
         unsafe { ffi::faiss_IndexIDMap_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts_mut(ptr, size as usize) }
+        unsafe { std::slice::from_raw_parts_mut(ptr, size) }
     }
 
     pub fn sub_index(&self) -> FaissIndexBorrowed<'_, Self> {
@@ -95,14 +95,14 @@ impl FaissIndexIDMap2 {
         let mut size = 0;
         let mut ptr = null_mut();
         unsafe { ffi::faiss_IndexIDMap2_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts(ptr, size as usize) }
+        unsafe { std::slice::from_raw_parts(ptr, size) }
     }
 
     pub fn id_map_mut(&mut self) -> &mut [i64] {
         let mut size = 0;
         let mut ptr = null_mut();
         unsafe { ffi::faiss_IndexIDMap2_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts_mut(ptr, size as usize) }
+        unsafe { std::slice::from_raw_parts_mut(ptr, size) }
     }
 
     pub fn sub_index(&self) -> FaissIndexBorrowed<'_, Self> {

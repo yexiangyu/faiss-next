@@ -13,7 +13,7 @@ pub trait FaissIndexFlatTrait: FaissIndexTrait {
         unsafe { std::slice::from_raw_parts(ptr, size) }
     }
 
-    fn xb_mut(&self) -> &mut [f32] {
+    fn xb_mut(&mut self) -> &mut [f32] {
         let mut ptr = null_mut();
         let mut size = 0usize;
         unsafe { ffi::faiss_IndexFlat_xb(self.inner(), &mut ptr, &mut size) };

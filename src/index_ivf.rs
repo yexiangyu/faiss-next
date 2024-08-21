@@ -47,14 +47,14 @@ impl FaissSearchParametersIVF {
     }
 
     pub fn nprobe(&self) -> usize {
-        unsafe { ffi::faiss_SearchParametersIVF_nprobe(self.inner) as usize }
+        unsafe { ffi::faiss_SearchParametersIVF_nprobe(self.inner) }
     }
     pub fn set_nprobe(&mut self, nprobe: usize) {
         unsafe { ffi::faiss_SearchParametersIVF_set_nprobe(self.inner, nprobe) }
     }
 
     pub fn max_codes(&self) -> usize {
-        unsafe { ffi::faiss_SearchParametersIVF_max_codes(self.inner) as usize }
+        unsafe { ffi::faiss_SearchParametersIVF_max_codes(self.inner) }
     }
     pub fn set_max_codes(&mut self, max_codes: usize) {
         unsafe { ffi::faiss_SearchParametersIVF_set_max_codes(self.inner, max_codes) }
@@ -63,10 +63,10 @@ impl FaissSearchParametersIVF {
 
 pub trait FaissIndexIVFTrait: FaissIndexTrait + Sized {
     fn nlist(&self) -> usize {
-        unsafe { ffi::faiss_IndexIVF_nlist(self.inner()) as usize }
+        unsafe { ffi::faiss_IndexIVF_nlist(self.inner()) }
     }
     fn nprobe(&self) -> usize {
-        unsafe { ffi::faiss_IndexIVF_nprobe(self.inner()) as usize }
+        unsafe { ffi::faiss_IndexIVF_nprobe(self.inner()) }
     }
     fn set_nprobe(&mut self, nprobe: usize) {
         unsafe { ffi::faiss_IndexIVF_set_nprobe(self.inner(), nprobe) }
@@ -103,6 +103,7 @@ pub trait FaissIndexIVFTrait: FaissIndexTrait + Sized {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn search_preassigned(
         &self,
         x: impl AsRef<[f32]>,
@@ -171,8 +172,10 @@ pub trait FaissIndexIVFTrait: FaissIndexTrait + Sized {
 
 pub use ffi::FaissIndexIVFStats;
 
-pub fn faiss_index_ivf_stats_reset(stats: *mut ffi::FaissIndexIVFStats) {
-    unsafe { ffi::faiss_IndexIVFStats_reset(stats) }
+pub fn faiss_index_ivf_stats_reset() {
+    let stats = faiss_get_index_ivf_stats();
+    let stats: *const _ = stats;
+    unsafe { ffi::faiss_IndexIVFStats_reset(stats as *mut _) }
 }
 
 pub fn faiss_get_index_ivf_stats() -> &'static FaissIndexIVFStats {

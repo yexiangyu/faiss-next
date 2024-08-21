@@ -26,12 +26,17 @@ impl DerefMut for FaissClusteringParameters {
         &mut self.inner
     }
 }
-
-impl FaissClusteringParameters {
-    pub fn new() -> Self {
+impl Default for FaissClusteringParameters {
+    fn default() -> Self {
         let mut inner = ffi::FaissClusteringParameters::default();
         unsafe { ffi::faiss_ClusteringParameters_init(&mut inner) };
         Self { inner }
+    }
+}
+
+impl FaissClusteringParameters {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -89,6 +94,8 @@ impl FaissClustering {
         unsafe { ffi::faiss_Clustering_centroids(self.inner, &mut centroid, &mut size) };
         unsafe { from_raw_parts(centroid, size) }
     }
+
+    #[allow(clippy::zst_offset)]
     pub fn iteration_stats(&self) -> Vec<FaissClusteringIterationStats> {
         let mut stats = null_mut();
         let mut size = 0usize;

@@ -102,6 +102,6 @@ impl FaissIndexIVFFlat {
     }
 
     pub fn nlist(&self) -> usize {
-        unsafe { ffi::faiss_IndexIVFFlat_nlist(self.inner) as usize }
+        unsafe { ffi::faiss_IndexIVFFlat_nlist(self.inner) }
     }
 }

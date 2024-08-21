@@ -109,7 +109,7 @@ pub trait FaissIndexBinaryTrait {
         faiss_rc(unsafe {
             ffi::faiss_IndexBinary_remove_ids(self.inner(), sel.inner(), &mut nremove)
         })?;
-        Ok(nremove as usize)
+        Ok(nremove)
     }
     fn reconstruct(&mut self, key: i64, mut recons: impl AsMut<[u8]>) -> Result<()> {
         assert_eq!(recons.as_mut().len() as i32 % self.d(), 0);

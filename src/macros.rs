@@ -1,4 +1,4 @@
-#[allow(unused)]
+#![allow(unused_macros)]
 
 macro_rules! impl_faiss_drop {
     ($klass: ident, $drop_fun: ident,  $inner: ty) => {
@@ -43,6 +43,7 @@ macro_rules! impl_faiss_new {
 
     ($outer :ident, $outer_new: ident, $inner: ident, $inner_new: ident, $arg1: ident, $arg1_ty: ty) => {
         impl $outer {
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             pub fn $outer_new($arg1: $arg1_ty) -> crate::error::Result<Self> {
                 let mut inner = std::ptr::null_mut();
                 crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_new(&mut inner, $arg1) })?;
@@ -65,6 +66,7 @@ macro_rules! impl_faiss_new {
 
     ($outer :ident, $outer_new: ident, $inner: ident, $inner_new: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty, $arg3: ident, $arg3_ty: ty) => {
         impl $outer {
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             pub fn $outer_new(
                 $arg1: $arg1_ty,
                 $arg2: $arg2_ty,
@@ -161,6 +163,7 @@ macro_rules! impl_faiss_functioin_rc {
 
     ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty, $arg3: ident, $arg3_ty: ty, $arg4: ident, $arg4_ty: ty) => {
         impl $klass {
+            #[allow(clippy::not_unsafe_ptr_arg_deref)]
             pub fn $fun(
                 &self,
                 $arg1: $arg1_ty,

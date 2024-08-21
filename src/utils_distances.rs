@@ -9,8 +9,8 @@ pub fn faiss_pairewise_L2sqrt(
 ) {
     assert_eq!(xq.as_ref().len() as i64 % d, 0);
     assert_eq!(xb.as_ref().len() as i64 % d, 0);
-    let nq = xq.as_ref().len() as i64 / d as i64;
-    let nb = xb.as_ref().len() as i64 / d as i64;
+    let nq = xq.as_ref().len() as i64 / d;
+    let nb = xb.as_ref().len() as i64 / d;
     assert_eq!(distance.as_mut().len() as i64, nb * nq);
     unsafe {
         ffi::faiss_pairwise_L2sqr_with_defaults(
