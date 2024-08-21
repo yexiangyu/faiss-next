@@ -11,3 +11,4 @@ bindgen = "0.70.0"
 [features]
 default = []
 bindgen = []
+cuda = []

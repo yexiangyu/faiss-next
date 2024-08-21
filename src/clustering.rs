@@ -7,8 +7,7 @@ use std::{
     slice::from_raw_parts,
 };
 
-// pub use ffi::FaissClusteringParameters;
-
+#[derive(Debug)]
 pub struct FaissClusteringParameters {
     pub inner: ffi::FaissClusteringParameters,
 }
@@ -42,7 +41,7 @@ impl FaissClusteringParameters {
 
 #[derive(Debug)]
 pub struct FaissClustering {
-    inner: *mut ffi::FaissClustering,
+    pub inner: *mut ffi::FaissClustering,
 }
 impl_faiss_getter!(FaissClustering, niter, faiss_Clustering_niter, i32);
 impl_faiss_getter!(FaissClustering, nredo, faiss_Clustering_nredo, i32);
