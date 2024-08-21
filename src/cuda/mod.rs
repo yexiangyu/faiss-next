@@ -17,4 +17,5 @@ pub mod prelude {
     pub use super::gpu_cloner_options::*;
     pub use super::gpu_index::*;
     pub use super::gpu_resources::FaissGpuResourcesProviderTrait;
+    pub use super::standard_gpu_resources::*;
 }
