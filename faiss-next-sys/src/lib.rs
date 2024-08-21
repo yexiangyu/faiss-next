@@ -8,3 +8,5 @@ include!("macos/aarch64_cuda.rs");
 include!("linux/x86_64_cuda.rs");
 #[cfg(all(target_os = "linux", target_arch = "x86_64", not(feature = "cuda")))]
 include!("linux/x86_64.rs");
+
+pub mod extension;

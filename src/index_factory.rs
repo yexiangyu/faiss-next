@@ -1,6 +1,6 @@
 use faiss_next_sys::{self as ffi, FaissMetricType};
 
-use crate::{error::*, index::FaissIndexOwned};
+use crate::{error::*, index::FaissIndexOwned, index_binary::FaissIndexBinaryOwned};
 
 /// build index with factory function
 /// ```rust
@@ -36,4 +36,19 @@ pub fn faiss_index_factory(
         ffi::faiss_index_factory(&mut index, d, description.as_ptr(), metric)
     })?;
     Ok(FaissIndexOwned { inner: index })
+}
+
+pub fn faiss_index_binary_factory(
+    d: i32,
+    description: impl AsRef<str>,
+) -> Result<FaissIndexBinaryOwned> {
+    let description = description.as_ref();
+    let description = std::ffi::CString::new(description).unwrap();
+    let mut inner = std::ptr::null_mut();
+    faiss_rc(ffi::extension::faiss_index_binary_factory(
+        d,
+        description.as_ptr(),
+        &mut inner,
+    ))?;
+    Ok(FaissIndexBinaryOwned { inner })
 }

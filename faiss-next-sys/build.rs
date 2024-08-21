@@ -11,7 +11,19 @@ fn main() {
         create_bindgen();
     }
 
+    do_build_extension();
     do_link();
+}
+
+fn do_build_extension() {
+    cxx_build::bridge("src/extension/mod.rs")
+        .file("src/extension/index_binary_factory.cpp")
+        .include(faiss_dir().unwrap().join("include"))
+        .std("c++11")
+        .compile("index_binary_factory");
+    println!("cargo:rerun-if-changed=src/extension/mod.rs");
+    println!("cargo:rerun-if-changed=src/extension/index_bianry_factory.cpp");
+    println!("cargo:rerun-if-changed=src/extension/index_bianry_factory.hpp");
 }
 
 fn do_link() {
@@ -151,6 +163,11 @@ fn faiss_dir() -> Option<std::path::PathBuf> {
                 return Some(faiss_dir);
             }
         }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        return Some(std::path::PathBuf::from("/usr/local/include"));
     }
 
     None
