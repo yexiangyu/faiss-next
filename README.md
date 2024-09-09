@@ -9,13 +9,13 @@
 | ------- | ------------- | --------- |
 | MacOS   | aarch64       | yes       |
 | MacOS   | x66_64        | no        |
-| Linux   | x86_64        | no        |
-| Linux   | x86_64 + cuda | no        |
+| Linux   | x86_64        | yes       |
+| Linux   | x86_64 + cuda | yes       |
 | Windows | x86_64        | no        |
 | Windows | x86_64 + cuda | no        |
 
-- TODO: 
-    - add extra api not avaible in `c_api` by `cxx-rs`.
+- Extend `function` not available in `c_api`
+    - `faiss_index_binary_factory`
 
 ## pre-requirement
 
@@ -99,6 +99,7 @@ let mut labels = vec![-1];
 index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels).unwrap();
 
 assert_eq!(labels, &[142])
+
 ```
 
 ## Running with `CUDA`

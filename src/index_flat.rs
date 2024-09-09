@@ -195,6 +195,7 @@ impl FaissIndexFlatL2 {
         Ok(FaissIndexFlatL2 { inner })
     }
 }
+
 impl FaissIndexTrait for FaissIndexFlatL2 {
     fn inner(&self) -> *mut faiss_next_sys::FaissIndex {
         self.inner

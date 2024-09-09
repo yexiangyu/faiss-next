@@ -85,6 +85,10 @@ fn create_bindgen() {
 
     #[cfg(feature = "cuda")]
     {
+        #[cfg(target_os = "macos")]
+        {
+            panic!("CUDA is not supported on macOS");
+        }
         output_bindings = output_dir.join(format!("{arch}_cuda.rs"));
     }
 

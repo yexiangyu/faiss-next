@@ -50,6 +50,8 @@ pub mod vector_transform;
 pub mod cuda;
 
 pub mod prelude {
+    #[cfg(feature = "cuda")]
+    pub use crate::cuda::prelude::*;
     pub use crate::impl_aux_index_structure::*;
     pub use crate::index::FaissMetricType;
     pub use crate::index_factory::faiss_index_factory;
