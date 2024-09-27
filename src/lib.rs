@@ -35,7 +35,7 @@ pub mod index_scalar_quantizer;
 /// `c_api/IndexShards_c.h`
 pub mod index_shards;
 /// macros used to generate some code
-pub mod macros;
+pub(crate) mod macros;
 /// `c_api/MetaIndexes_c.h`
 pub mod meta_indexes;
 /// collected trait from modules

@@ -13,6 +13,9 @@ pub mod gpu_resources;
 /// `faiss/c_api/gpu/StandardGpuResources_c.h``
 pub mod standard_gpu_resources;
 
+/// `faiss/gpu/GpuDistance.h`
+pub mod gpu_distance;
+
 pub mod prelude {
     pub use super::gpu_cloner_options::*;
     pub use super::gpu_index::*;

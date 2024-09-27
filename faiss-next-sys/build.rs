@@ -18,12 +18,15 @@ fn main() {
 fn do_build_extension() {
     cxx_build::bridge("src/extension/mod.rs")
         .file("src/extension/index_binary_factory.cpp")
+        .file("src/extension/gpu_distance.cpp")
         .include(faiss_dir().unwrap().join("include"))
         .std("c++11")
-        .compile("index_binary_factory");
+        .compile("faiss_next_extension");
     println!("cargo:rerun-if-changed=src/extension/mod.rs");
     println!("cargo:rerun-if-changed=src/extension/index_bianry_factory.cpp");
     println!("cargo:rerun-if-changed=src/extension/index_bianry_factory.hpp");
+    println!("cargo:rerun-if-changed=src/extension/gpu_distance.cpp");
+    println!("cargo:rerun-if-changed=src/extension/gpu_distance.hpp");
 }
 
 fn do_link() {

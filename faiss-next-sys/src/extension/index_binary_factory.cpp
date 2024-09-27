@@ -14,7 +14,7 @@ int faiss_index_binary_factory(int d, const Char *description, FaissIndexBinary 
         }
         return 999999999;
     }
-    catch (std::exception e)
+    catch (std::exception &e)
     {
         return 999999999;
     }

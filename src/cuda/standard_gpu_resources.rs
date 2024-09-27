@@ -3,13 +3,19 @@ use std::ptr::null_mut;
 use crate::{error::*, macros::*};
 use faiss_next_sys as ffi;
 
-use super::gpu_resources::cudaStream;
+use super::{gpu_resources::cudaStream, prelude::FaissGpuResourcesProviderTrait};
 
 #[derive(Debug)]
 pub struct FaissStandardGpuResources {
     pub inner: *mut ffi::FaissGpuResourcesProvider,
 }
 impl_faiss_drop!(FaissStandardGpuResources, faiss_GpuResourcesProvider_free);
+
+impl FaissGpuResourcesProviderTrait for FaissStandardGpuResources {
+    fn inner(&self) -> *mut ffi::FaissGpuResourcesProvider {
+        self.inner
+    }
+}
 
 impl FaissStandardGpuResources {
     pub fn new() -> Result<Self> {
@@ -28,9 +34,13 @@ impl FaissStandardGpuResources {
         faiss_rc(unsafe { ffi::faiss_StandardGpuResources_setPinnedMemory(self.inner, size) })
     }
     pub fn set_default_stream(&mut self, device: i32, stream: cudaStream) -> Result<()> {
-        faiss_rc(unsafe { ffi::faiss_StandardGpuResources_setDefaultStream(self.inner, device, stream.inner) })
-    }   
+        faiss_rc(unsafe {
+            ffi::faiss_StandardGpuResources_setDefaultStream(self.inner, device, stream.inner)
+        })
+    }
     pub fn set_default_null_stream_all_devices(&mut self) -> Result<()> {
-        faiss_rc(unsafe { ffi::faiss_StandardGpuResources_setDefaultNullStreamAllDevices(self.inner) })
+        faiss_rc(unsafe {
+            ffi::faiss_StandardGpuResources_setDefaultNullStreamAllDevices(self.inner)
+        })
     }
 }
