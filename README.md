@@ -101,5 +101,4 @@ index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels).unwrap()
 assert_eq!(labels, &[142])
 
 ```
-
 ## Running with `CUDA`
