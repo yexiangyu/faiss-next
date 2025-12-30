@@ -1,128 +1,174 @@
-use faiss_next_sys::{self as ffi, FaissMetricType};
+use crate::error::Result;
+use faiss_next_sys as ffi;
 
-use crate::{error::*, index::FaissIndexTrait, macros::*};
+use std::ptr::null_mut;
+
+use crate::index::{IndexTrait, MetricType};
+
 pub use ffi::FaissQuantizerType;
-use std::{mem::forget, ptr::null_mut};
 
-#[derive(Debug)]
-pub struct FaissIndexScalarQuantizer {
-    inner: *mut ffi::FaissIndexScalarQuantizer,
-}
-impl FaissIndexTrait for FaissIndexScalarQuantizer {
-    fn inner(&self) -> *mut ffi::FaissIndex {
-        self.inner as *mut _
-    }
-}
+pub trait IndexScalarQuantizerTrait: IndexTrait {}
 
-impl_faiss_drop!(FaissIndexScalarQuantizer, faiss_IndexScalarQuantizer_free);
-impl FaissIndexScalarQuantizer {
-    pub fn new() -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexScalarQuantizer_new(&mut inner) })?;
-        Ok(Self { inner })
-    }
+macro_rules! impl_index_scalar_quantizer {
+    ($cls: ident) => {
+        impl IndexTrait for $cls {
+            fn inner(&self) -> *mut ffi::FaissIndex {
+                self.inner
+            }
+        }
 
-    pub fn new_with(d: i64, qt: FaissQuantizerType, metric: FaissMetricType) -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexScalarQuantizer_new_with(&mut inner, d, qt, metric) })?;
-        Ok(Self { inner })
-    }
-
-    pub fn downcast(rhs: impl FaissIndexTrait) -> Self {
-        let inner = rhs.inner() as *mut _;
-        let inner = unsafe { ffi::faiss_IndexScalarQuantizer_cast(inner) };
-        forget(rhs);
-        Self { inner }
-    }
+        impl IndexScalarQuantizerTrait for $cls {}
+    };
 }
 
 #[derive(Debug)]
-pub struct FaissIndexIVFScalarQuantizer {
-    pub inner: *mut ffi::FaissIndexIVFScalarQuantizer,
+pub struct IndexScalarQuantizer {
+    inner: *mut ffi::FaissIndex,
 }
-impl FaissIndexTrait for FaissIndexIVFScalarQuantizer {
-    fn inner(&self) -> *mut ffi::FaissIndex {
-        self.inner as *mut _
-    }
-}
-impl_faiss_drop!(
-    FaissIndexIVFScalarQuantizer,
-    faiss_IndexIVFScalarQuantizer_free
-);
-impl FaissIndexIVFScalarQuantizer {
+
+impl_index_scalar_quantizer!(IndexScalarQuantizer);
+ffi::impl_drop!(IndexScalarQuantizer, faiss_IndexScalarQuantizer_free);
+
+impl IndexScalarQuantizer {
     pub fn new() -> Result<Self> {
         let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexIVFScalarQuantizer_new(&mut inner) })?;
+        ffi::ok!(faiss_IndexScalarQuantizer_new, &mut inner)?;
+        Ok(Self { inner })
+    }
+
+    pub fn new_with(d: i64, qt: ffi::FaissQuantizerType, metric: MetricType) -> Result<Self> {
+        let mut inner = null_mut();
+        ffi::ok!(
+            faiss_IndexScalarQuantizer_new_with,
+            &mut inner,
+            d,
+            qt,
+            metric
+        )?;
+        Ok(Self { inner })
+    }
+
+    pub fn cast(index: impl IndexTrait) -> Result<Self> {
+        let inner = ffi::run!(faiss_IndexScalarQuantizer_cast, index.inner());
+        if inner.is_null() {
+            return Err(crate::error::Error::Faiss(ffi::Error {
+                code: -1,
+                message: "Failed to cast index".to_string(),
+            }));
+        }
+        Ok(Self { inner })
+    }
+}
+
+pub trait IndexIVFScalarQuantizerTrait: IndexTrait {}
+
+macro_rules! impl_index_ivf_scalar_quantizer {
+    ($cls: ident) => {
+        impl IndexTrait for $cls {
+            fn inner(&self) -> *mut ffi::FaissIndex {
+                self.inner
+            }
+        }
+
+        impl IndexIVFScalarQuantizerTrait for $cls {}
+    };
+}
+
+#[derive(Debug)]
+pub struct IndexIVFScalarQuantizer {
+    inner: *mut ffi::FaissIndex,
+}
+
+impl_index_ivf_scalar_quantizer!(IndexIVFScalarQuantizer);
+ffi::impl_drop!(IndexIVFScalarQuantizer, faiss_IndexIVFScalarQuantizer_free);
+#[rustfmt::skip]
+ffi::impl_getter!(IndexIVFScalarQuantizer, nlist, faiss_IndexIVFScalarQuantizer_nlist, usize);
+#[rustfmt::skip]
+ffi::impl_getter!(IndexIVFScalarQuantizer, nprobe, faiss_IndexIVFScalarQuantizer_nprobe, usize);
+#[rustfmt::skip]
+ffi::impl_setter!(IndexIVFScalarQuantizer, set_nprobe, faiss_IndexIVFScalarQuantizer_set_nprobe, val, usize);
+
+impl IndexIVFScalarQuantizer {
+    pub fn new() -> Result<Self> {
+        let mut inner = null_mut();
+        ffi::ok!(faiss_IndexIVFScalarQuantizer_new, &mut inner)?;
         let mut ret = Self { inner };
-        ret.set_own_fields(true);
+        ret.set_own_fields(true)?;
         Ok(ret)
     }
 
     pub fn new_with(
         d: i64,
-        quantizer: impl FaissIndexTrait,
+        quantizer: impl IndexTrait,
         nlist: usize,
-        qt: FaissQuantizerType,
+        qt: ffi::FaissQuantizerType,
     ) -> Result<Self> {
-        let quantizer_inner = quantizer.inner() as *mut _;
-        forget(quantizer);
         let mut inner = null_mut();
-        faiss_rc(unsafe {
-            ffi::faiss_IndexIVFScalarQuantizer_new_with(&mut inner, quantizer_inner, d, nlist, qt)
-        })?;
+        ffi::ok!(
+            faiss_IndexIVFScalarQuantizer_new_with,
+            &mut inner,
+            quantizer.inner(),
+            d,
+            nlist,
+            qt
+        )?;
         let mut ret = Self { inner };
-        ret.set_own_fields(true);
+        ret.set_own_fields(true)?;
         Ok(ret)
     }
 
     pub fn new_with_metric(
         d: usize,
-        quantizer: impl FaissIndexTrait,
+        quantizer: impl IndexTrait,
         nlist: usize,
-        qt: FaissQuantizerType,
-        metric: FaissMetricType,
+        qt: ffi::FaissQuantizerType,
+        metric: MetricType,
         encode_residual: bool,
     ) -> Result<Self> {
-        let quantizer_inner = quantizer.inner() as *mut _;
-        forget(quantizer);
         let mut inner = null_mut();
-        faiss_rc(unsafe {
-            ffi::faiss_IndexIVFScalarQuantizer_new_with_metric(
-                &mut inner,
-                quantizer_inner,
-                d,
-                nlist,
-                qt,
-                metric,
-                encode_residual as i32,
-            )
-        })?;
+        ffi::ok!(
+            faiss_IndexIVFScalarQuantizer_new_with_metric,
+            &mut inner,
+            quantizer.inner(),
+            d,
+            nlist,
+            qt,
+            metric,
+            encode_residual as i32
+        )?;
         let mut ret = Self { inner };
-        ret.set_own_fields(true);
+        ret.set_own_fields(true)?;
         Ok(ret)
     }
 
-    pub fn downcast(rhs: impl FaissIndexTrait) -> Self {
-        let inner = rhs.inner() as *mut _;
-        let inner = unsafe { ffi::faiss_IndexIVFScalarQuantizer_cast(inner) };
-        forget(rhs);
-        Self { inner }
+    pub fn cast(index: impl IndexTrait) -> Result<Self> {
+        let inner = ffi::run!(faiss_IndexIVFScalarQuantizer_cast, index.inner());
+        if inner.is_null() {
+            return Err(crate::error::Error::Faiss(ffi::Error {
+                code: -1,
+                message: "Failed to cast index".to_string(),
+            }));
+        }
+        Ok(Self { inner })
     }
 
-    fn set_own_fields(&mut self, own: bool) {
-        unsafe { ffi::faiss_IndexIVFScalarQuantizer_set_own_fields(self.inner, own as i32) }
+    fn set_own_fields(&mut self, own: bool) -> Result<()> {
+        unsafe { ffi::faiss_IndexIVFScalarQuantizer_set_own_fields(self.inner, own as i32) };
+        Ok(())
     }
 
     pub fn own_fields(&self) -> bool {
         unsafe { ffi::faiss_IndexIVFScalarQuantizer_own_fields(self.inner) > 0 }
     }
-    pub fn quantizer(&self) -> Option<FaissIndexScalarQuantizer> {
+
+    pub fn quantizer(&self) -> Option<IndexScalarQuantizer> {
         let inner = unsafe { ffi::faiss_IndexIVFScalarQuantizer_quantizer(self.inner) };
         match inner.is_null() {
             true => None,
-            false => Some(FaissIndexScalarQuantizer { inner }),
+            false => Some(IndexScalarQuantizer { inner }),
         }
     }
+
     pub fn add_core(
         &mut self,
         x: impl AsRef<[f32]>,
@@ -132,33 +178,14 @@ impl FaissIndexIVFScalarQuantizer {
         let n = x.as_ref().len() / self.d() as usize;
         assert_eq!(xids.as_ref().len(), n);
         assert_eq!(precomputed_idx.as_ref().len(), n);
-        faiss_rc(unsafe {
-            ffi::faiss_IndexIVFScalarQuantizer_add_core(
-                self.inner,
-                n as i64,
-                x.as_ref().as_ptr(),
-                xids.as_ref().as_ptr(),
-                precomputed_idx.as_ref().as_ptr(),
-            )
-        })
+        ffi::ok!(
+            faiss_IndexIVFScalarQuantizer_add_core,
+            self.inner,
+            n as i64,
+            x.as_ref().as_ptr(),
+            xids.as_ref().as_ptr(),
+            precomputed_idx.as_ref().as_ptr()
+        )?;
+        Ok(())
     }
 }
-impl_faiss_getter!(
-    FaissIndexIVFScalarQuantizer,
-    nlist,
-    faiss_IndexIVFScalarQuantizer_nlist,
-    usize
-);
-impl_faiss_getter!(
-    FaissIndexIVFScalarQuantizer,
-    nprobe,
-    faiss_IndexIVFScalarQuantizer_nprobe,
-    usize
-);
-impl_faiss_setter!(
-    FaissIndexIVFScalarQuantizer,
-    set_nprobe,
-    faiss_IndexIVFScalarQuantizer_set_nprobe,
-    probe,
-    usize
-);

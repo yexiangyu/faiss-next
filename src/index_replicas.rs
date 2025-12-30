@@ -1,63 +1,79 @@
-use std::mem::forget;
-
-use crate::{error::*, index::FaissIndexBorrowed, macros::*, traits::FaissIndexTrait};
+use crate::error::Result;
 use faiss_next_sys as ffi;
 
+use std::{mem::forget, ptr::null_mut};
+
+use crate::index::{IndexBorrowed, IndexTrait};
+
+pub trait IndexReplicasTrait: IndexTrait {
+    fn add_replica(&mut self, index: impl IndexTrait) -> Result<()> {
+        let inner = index.inner();
+        forget(index);
+        ffi::ok!(faiss_IndexReplicas_add_replica, self.inner(), inner)?;
+        Ok(())
+    }
+
+    fn remove_replica(&mut self, index: &impl IndexTrait) -> Result<()> {
+        ffi::ok!(
+            faiss_IndexReplicas_remove_replica,
+            self.inner(),
+            index.inner()
+        )?;
+        Ok(())
+    }
+
+    fn at(&self, index: usize) -> Option<IndexBorrowed<'_>> {
+        let inner = unsafe { ffi::faiss_IndexReplicas_at(self.inner(), index as i32) };
+        match inner.is_null() {
+            true => None,
+            false => Some(IndexBorrowed::new(inner)),
+        }
+    }
+    
+    fn own_fields(&self) -> bool {
+        unsafe { ffi::faiss_IndexReplicas_own_fields(self.inner()) != 0 }
+    }
+}
+
+macro_rules! impl_index_replicas {
+    ($cls: ident) => {
+        impl IndexTrait for $cls {
+            fn inner(&self) -> *mut ffi::FaissIndex {
+                self.inner
+            }
+        }
+
+        impl IndexReplicasTrait for $cls {}
+    };
+}
+
 #[derive(Debug)]
-pub struct FaissIndexReplicas {
-    inner: *mut ffi::FaissIndexReplicas,
-}
-impl_faiss_drop!(FaissIndexReplicas, faiss_IndexReplicas_free);
-
-impl FaissIndexTrait for FaissIndexReplicas {
-    fn inner(&self) -> *mut ffi::FaissIndex {
-        self.inner as *mut _
-    }
+pub struct IndexReplicas {
+    inner: *mut ffi::FaissIndex,
 }
 
-impl FaissIndexReplicas {
-    pub fn new(d: i64) -> Result<Self> {
-        let mut inner = std::ptr::null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexReplicas_new(&mut inner, d) })?;
-        let mut ret = Self { inner };
-        ret.set_own_fields(true);
-        Ok(ret)
-    }
+impl_index_replicas!(IndexReplicas);
+ffi::impl_drop!(IndexReplicas, faiss_IndexReplicas_free);
 
-    pub fn new_iwth_options(d: i64, threaded: bool) -> Result<Self> {
-        let mut inner = std::ptr::null_mut();
-        faiss_rc(unsafe {
-            ffi::faiss_IndexReplicas_new_with_options(&mut inner, d, threaded as i32)
-        })?;
+impl IndexReplicas {
+    pub fn new(d: i32) -> Result<Self> {
+        let mut inner = null_mut();
+        ffi::ok!(faiss_IndexReplicas_new, &mut inner, d as i64)?;
+        ffi::run!(faiss_IndexReplicas_set_own_fields, inner, true as i32);
         Ok(Self { inner })
     }
 
-    pub fn add_replica(&mut self, index: impl FaissIndexTrait) -> Result<()> {
-        let inner = index.inner() as *mut _;
-        forget(index);
-        faiss_rc(unsafe { ffi::faiss_IndexReplicas_add_replica(self.inner, inner) })
+    pub fn new_with_options(d: i32, threaded: bool) -> Result<Self> {
+        let mut inner = null_mut();
+        ffi::ok!(
+            faiss_IndexReplicas_new_with_options,
+            &mut inner,
+            d as i64,
+            threaded as i32
+        )?;
+        ffi::run!(faiss_IndexReplicas_set_own_fields, inner, true as i32);
+        Ok(Self { inner })
     }
 
-    pub fn remove_replica(&mut self, index: &impl FaissIndexTrait) -> Result<()> {
-        faiss_rc(unsafe { ffi::faiss_IndexReplicas_remove_replica(self.inner, index.inner()) })
-    }
 
-    pub fn at(&self, index: usize) -> Option<FaissIndexBorrowed<'_, Self>> {
-        let inner = unsafe { ffi::faiss_IndexReplicas_at(self.inner, index as i32) };
-        match inner.is_null() {
-            true => None,
-            false => Some(FaissIndexBorrowed {
-                inner,
-                owner: std::marker::PhantomData,
-            }),
-        }
-    }
-
-    pub fn own_fields(&self) -> bool {
-        unsafe { ffi::faiss_IndexReplicas_own_fields(self.inner) > 0 }
-    }
-
-    fn set_own_fields(&mut self, value: bool) {
-        unsafe { ffi::faiss_IndexReplicas_set_own_fields(self.inner, value as i32) }
-    }
 }

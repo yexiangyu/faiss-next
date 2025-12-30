@@ -1,129 +1,157 @@
-use std::mem::forget;
-use std::ptr::null_mut;
+use crate::error::Result;
+use faiss_next_sys as ffi;
 
-use faiss_next_sys::{self as ffi};
-
-use crate::{
-    error::*,
-    index::{FaissIndexBorrowed, FaissIndexTrait},
-    macros::*,
+use std::{
+    ptr::null_mut,
+    slice::{from_raw_parts, from_raw_parts_mut},
 };
 
-#[derive(Debug)]
-pub struct FaissIndexIDMap {
-    inner: *mut ffi::FaissIndexIDMap,
-}
+use crate::index::IndexTrait;
 
-impl FaissIndexTrait for FaissIndexIDMap {
-    fn inner(&self) -> *mut ffi::FaissIndex {
-        self.inner as *mut _
-    }
-}
-
-impl_faiss_drop!(FaissIndexIDMap, faiss_Index_free);
-
-impl FaissIndexIDMap {
-    pub fn new(rhs: impl FaissIndexTrait) -> Result<Self> {
-        let rhs_inner = rhs.inner() as *mut _;
-        forget(rhs);
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexIDMap_new(&mut inner, rhs_inner) })?;
-        let mut ret = Self { inner };
-        ret.set_own_fields(true);
-        Ok(ret)
-    }
-    pub fn downcast(rhs: impl FaissIndexTrait) -> Self {
-        let inner = rhs.inner() as *mut _;
-        let inner = unsafe { ffi::faiss_IndexIDMap_cast(inner) };
-        forget(rhs);
-        Self { inner }
+pub trait IndexIDMapTrait: IndexTrait {
+    fn own_fields(&self) -> bool {
+        ffi::run!(
+            faiss_IndexIDMap_own_fields,
+            self.inner() as *mut ffi::FaissIndexIDMap
+        ) != 0
     }
 
-    pub fn own_fields(&self) -> bool {
-        unsafe { ffi::faiss_IndexIDMap_own_fields(self.inner) > 0 }
-    }
-
-    pub fn id_map(&self) -> &[i64] {
+    fn id_map(&self) -> &[i64] {
         let mut size = 0;
         let mut ptr = null_mut();
-        unsafe { ffi::faiss_IndexIDMap_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts(ptr, size) }
+        ffi::run!(faiss_IndexIDMap_id_map, self.inner(), &mut ptr, &mut size);
+        unsafe { from_raw_parts(ptr, size) }
     }
 
-    pub fn id_map_mut(&mut self) -> &mut [i64] {
+    fn id_map_mut(&mut self) -> &mut [i64] {
         let mut size = 0;
         let mut ptr = null_mut();
-        unsafe { ffi::faiss_IndexIDMap_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts_mut(ptr, size) }
+        ffi::run!(faiss_IndexIDMap_id_map, self.inner(), &mut ptr, &mut size);
+        unsafe { from_raw_parts_mut(ptr, size) }
     }
 
-    pub fn sub_index(&self) -> FaissIndexBorrowed<'_, Self> {
-        let inner = unsafe { ffi::faiss_IndexIDMap_sub_index(self.inner) };
-        FaissIndexBorrowed {
-            inner,
-            owner: std::marker::PhantomData,
+    fn sub_index(&self) -> crate::index::IndexBorrowed<'_> {
+        let inner = ffi::run!(faiss_IndexIDMap_sub_index, self.inner());
+        crate::index::IndexBorrowed::new(inner)
+    }
+}
+
+macro_rules! impl_index_id_map {
+    ($cls: ident) => {
+        impl IndexTrait for $cls {
+            fn inner(&self) -> *mut ffi::FaissIndex {
+                self.inner
+            }
         }
-    }
 
-    fn set_own_fields(&mut self, own: bool) {
-        unsafe { ffi::faiss_IndexIDMap_set_own_fields(self.inner, own as i32) }
-    }
+        impl IndexIDMapTrait for $cls {}
+    };
 }
 
 #[derive(Debug)]
-pub struct FaissIndexIDMap2 {
-    inner: *mut ffi::FaissIndexIDMap2,
+pub struct IndexIDMap {
+    inner: *mut ffi::FaissIndex,
 }
-impl_faiss_drop!(FaissIndexIDMap2, faiss_Index_free);
 
-impl FaissIndexIDMap2 {
-    pub fn new(rhs: impl FaissIndexTrait) -> Result<Self> {
-        let rhs_inner = rhs.inner() as *mut _;
-        forget(rhs);
+impl_index_id_map!(IndexIDMap);
+ffi::impl_drop!(IndexIDMap, faiss_Index_free);
+
+impl IndexIDMap {
+    pub fn new(index: impl IndexTrait) -> Result<Self> {
         let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_IndexIDMap2_new(&mut inner, rhs_inner) })?;
-        let mut ret = Self { inner };
-        ret.set_own_fields(true);
-        Ok(ret)
+        ffi::ok!(faiss_IndexIDMap_new, &mut inner, index.inner())?;
+        ffi::run!(faiss_IndexIDMap_set_own_fields, inner, true as i32);
+        Ok(Self { inner })
     }
-    pub fn downcast(rhs: impl FaissIndexTrait) -> Self {
-        let inner = rhs.inner() as *mut _;
-        let inner = unsafe { ffi::faiss_IndexIDMap2_cast(inner) };
-        forget(rhs);
+
+    pub fn cast(index: impl IndexTrait) -> Self {
+        let inner = ffi::run!(faiss_IndexIDMap_cast, index.inner());
+        assert!(!inner.is_null(), "Failed to cast index");
         Self { inner }
     }
+}
 
-    pub fn id_map(&self) -> &[i64] {
+pub trait IndexIDMap2Trait: IndexTrait {
+    fn id_map(&self) -> &[i64] {
         let mut size = 0;
         let mut ptr = null_mut();
-        unsafe { ffi::faiss_IndexIDMap2_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts(ptr, size) }
+        unsafe {
+            ffi::faiss_IndexIDMap2_id_map(
+                self.inner() as *mut ffi::FaissIndexIDMap2,
+                &mut ptr,
+                &mut size,
+            )
+        };
+        unsafe { from_raw_parts(ptr, size) }
     }
 
-    pub fn id_map_mut(&mut self) -> &mut [i64] {
+    fn id_map_mut(&mut self) -> &mut [i64] {
         let mut size = 0;
         let mut ptr = null_mut();
-        unsafe { ffi::faiss_IndexIDMap2_id_map(self.inner, &mut ptr, &mut size) };
-        unsafe { std::slice::from_raw_parts_mut(ptr, size) }
+        unsafe {
+            ffi::faiss_IndexIDMap2_id_map(
+                self.inner() as *mut ffi::FaissIndexIDMap2,
+                &mut ptr,
+                &mut size,
+            )
+        };
+        unsafe { from_raw_parts_mut(ptr, size) }
     }
 
-    pub fn sub_index(&self) -> FaissIndexBorrowed<'_, Self> {
-        let inner = unsafe { ffi::faiss_IndexIDMap2_sub_index(self.inner) };
-        FaissIndexBorrowed {
-            inner,
-            owner: std::marker::PhantomData,
+    fn sub_index(&self) -> crate::index::IndexBorrowed<'_> {
+        let inner =
+            unsafe { ffi::faiss_IndexIDMap2_sub_index(self.inner() as *mut ffi::FaissIndexIDMap2) };
+        crate::index::IndexBorrowed::new(inner)
+    }
+
+    fn own_fields(&self) -> bool {
+        unsafe { ffi::faiss_IndexIDMap2_own_fields(self.inner() as *mut ffi::FaissIndexIDMap2) > 0 }
+    }
+
+    fn construct_rev_map(&mut self) -> Result<()> {
+        let result = unsafe {
+            ffi::faiss_IndexIDMap2_construct_rev_map(self.inner() as *mut ffi::FaissIndexIDMap2)
+        };
+        ffi::rc(result).map_err(crate::error::Error::from)
+    }
+}
+
+macro_rules! impl_index_id_map2 {
+    ($cls: ident) => {
+        impl IndexTrait for $cls {
+            fn inner(&self) -> *mut ffi::FaissIndex {
+                self.inner
+            }
         }
+
+        impl IndexIDMap2Trait for $cls {}
+    };
+}
+
+#[derive(Debug)]
+pub struct IndexIDMap2 {
+    inner: *mut ffi::FaissIndex,
+}
+
+impl_index_id_map2!(IndexIDMap2);
+ffi::impl_drop!(IndexIDMap2, faiss_Index_free);
+
+impl IndexIDMap2 {
+    pub fn new(index: impl IndexTrait) -> Result<Self> {
+        let mut inner = null_mut();
+        ffi::ok!(faiss_IndexIDMap2_new, &mut inner, index.inner())?;
+        ffi::run!(faiss_IndexIDMap2_set_own_fields, inner, true as i32);
+        Ok(Self { inner })
     }
 
-    pub fn construct_rev_map(&mut self) -> Result<()> {
-        faiss_rc(unsafe { ffi::faiss_IndexIDMap2_construct_rev_map(self.inner) })
-    }
-
-    pub fn own_fiels(&self) -> bool {
-        unsafe { ffi::faiss_IndexIDMap2_own_fields(self.inner) > 0 }
-    }
-
-    fn set_own_fields(&mut self, own: bool) {
-        unsafe { ffi::faiss_IndexIDMap2_set_own_fields(self.inner, own as i32) }
+    pub fn cast(index: impl IndexTrait) -> Result<Self> {
+        let inner = ffi::run!(faiss_IndexIDMap2_cast, index.inner());
+        if inner.is_null() {
+            return Err(crate::error::Error::Faiss(ffi::Error {
+                code: -1, // Use -1 as a generic error code for failed cast
+                message: "Failed to cast index to IndexIDMap2".to_string(),
+            }));
+        }
+        Ok(Self { inner })
     }
 }

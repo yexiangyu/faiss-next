@@ -6,13 +6,110 @@ fn main() {
         return;
     }
 
-    #[cfg(feature = "bindgen")]
-    {
-        create_bindgen();
+    gen_bindings();
+
+    gen_extension();
+
+    link();
+}
+
+fn gen_bindings() {
+    let (os, arch, compute) = triplet();
+
+    if cfg!(not(feature = "bindgen")) {
+        return;
     }
 
-    do_build_extension();
-    do_link();
+    println!("cargo:rerun-if-changed=faissw.h");
+
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+
+    let output_dir = format!("{manifest_dir}/src/{os}/{arch}/");
+
+    let _ = std::fs::create_dir_all(&output_dir);
+
+    let mut builder = bindgen::builder()
+        .header("faissw.h")
+        .derive_default(true)
+        .default_enum_style(bindgen::EnumVariation::Rust {
+            non_exhaustive: true,
+        })
+        .layout_tests(false)
+        .allowlist_function("faiss_.*")
+        .allowlist_type("idx_t|Faiss.*")
+        .opaque_type("FILE");
+
+    // setup default include dir
+    if let Ok(include_dir) = std::env::var("FAISS_INCLUDE_DIR") {
+        builder = builder.clang_arg(format!("-I{include_dir}"))
+    } else if os == "macos" && arch == "aarch64" {
+        builder = builder.clang_arg("-I/opt/homebrew/opt/faiss/include");
+    }
+
+    // setup include when use cuda
+    if cfg!(feature = "cuda") {
+        builder = builder.clang_arg("-DUSE_CUDA");
+
+        if let Ok(cuda_path) = std::env::var("CUDA_PATH") {
+            builder = builder.clang_arg(format!("-I{cuda_path}/include"));
+        } else {
+            // if CUDA_PATH is not set, try to find it in default locations on linux
+            if cfg!(target_os = "linux") {
+                builder = builder.clang_arg("-I/usr/local/cuda/include");
+            }
+        }
+    }
+
+    //generate and write bindings
+    let output = format!("{output_dir}/{compute}.rs");
+
+    builder
+        .generate()
+        .expect("failed to generate bindings")
+        .write_to_file(&output)
+        .expect("failed to write bindings");
+}
+
+fn gen_extension() {}
+
+fn link() {}
+
+const fn triplet() -> (&'static str, &'static str, &'static str) {
+    if cfg!(target_os = "macos") {
+        if cfg!(feature = "cuda") {
+            panic!("CUDA is not supported on macOS");
+        }
+
+        if cfg!(target_arch = "aarch64") {
+            return ("macos", "aarch64", "cpu");
+        }
+
+        panic!("target_arch no supported on macos");
+    }
+
+    if cfg!(target_os = "linux") {
+        if cfg!(target_arch = "x86_64") {
+            if cfg!(feature = "cuda") {
+                return ("linux", "x86_64", "cuda");
+            } else {
+                return ("linux", "x86-64", "cpu");
+            }
+        }
+        panic!("target_arch no supported on linux");
+    }
+
+    if cfg!(target_os = "windows") {
+        if cfg!(target_arch = "x86_64") {
+            if cfg!(feature = "cuda") {
+                return ("windows", "x86_64", "cuda");
+            } else {
+                return ("windows", "x86_64", "cpu");
+            }
+        }
+        panic!("target_arch no supported on windows");
+    }
+
+    panic!("unspported os and arch")
 }
 
 fn do_build_extension() {
