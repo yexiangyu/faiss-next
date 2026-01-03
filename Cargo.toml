@@ -1,0 +1,11 @@
+[package]
+name = "faiss-next"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+
+[build-dependencies]
+bindgen = "0.72.1"
+dotenv = "0.15.0"

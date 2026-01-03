@@ -22,6 +22,18 @@ bak/
 
 /target
 
+**/.DS_Store
+**/.claude
+**/.env
+.vscode/
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+#/target
+
 
 # Added by cargo
 #
