@@ -1,183 +1,237 @@
-use std::mem::forget;
-use std::ptr::null_mut;
+use crate::bindings;
+use crate::error::{check_return_code, Result};
+use crate::macros::*;
+use crate::traits::{FaissIVFIndex, FaissIndex};
 
-use crate::{
-    error::*,
-    impl_aux_index_structure::FaissIDSelectorBorrowed,
-    index::{FaissIndexBorrowed, FaissSearchParametersTrait},
-    traits::{FaissIDSelectorTrait, FaissIndexTrait},
-};
-use faiss_next_sys as ffi;
-
-pub struct FaissSearchParametersIVF {
-    pub inner: *mut ffi::FaissSearchParameters,
+pub struct IndexIVF {
+    pub(crate) inner: *mut bindings::FaissIndex,
 }
 
-impl FaissSearchParametersIVF {
-    pub fn downcast(params: impl FaissSearchParametersTrait) -> Self {
-        let inner = unsafe { ffi::faiss_SearchParametersIVF_cast(params.inner()) };
-        forget(params);
+impl_faiss_drop!(IndexIVF, faiss_IndexIVF_free);
+impl_index_common!(IndexIVF);
+
+impl FaissIndex for IndexIVF {
+    fn inner(&self) -> *mut bindings::FaissIndex {
+        self.inner
+    }
+
+    fn train(&mut self, n: i64, x: &[f32]) -> Result<()> {
+        check_return_code(unsafe { bindings::faiss_Index_train(self.inner, n, x.as_ptr()) })
+    }
+
+    fn add(&mut self, n: i64, x: &[f32]) -> Result<()> {
+        check_return_code(unsafe { bindings::faiss_Index_add(self.inner, n, x.as_ptr()) })
+    }
+
+    fn add_with_ids(&mut self, n: i64, x: &[f32], ids: &[i64]) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_add_with_ids(self.inner, n, x.as_ptr(), ids.as_ptr())
+        })
+    }
+
+    fn search(
+        &self,
+        n: i64,
+        x: &[f32],
+        k: i64,
+        distances: &mut [f32],
+        labels: &mut [i64],
+    ) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_search(
+                self.inner,
+                n,
+                x.as_ptr(),
+                k,
+                distances.as_mut_ptr(),
+                labels.as_mut_ptr(),
+            )
+        })
+    }
+
+    fn range_search(
+        &self,
+        n: i64,
+        x: &[f32],
+        radius: f32,
+        result: *mut bindings::FaissRangeSearchResult,
+    ) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_range_search(self.inner, n, x.as_ptr(), radius, result)
+        })
+    }
+
+    fn reset(&mut self) -> Result<()> {
+        check_return_code(unsafe { bindings::faiss_Index_reset(self.inner) })
+    }
+
+    fn reconstruct(&self, key: i64, recons: &mut [f32]) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_reconstruct(self.inner, key, recons.as_mut_ptr())
+        })
+    }
+}
+
+impl FaissIVFIndex for IndexIVF {
+    fn nlist(&self) -> usize {
+        unsafe { bindings::faiss_IndexIVF_nlist(self.inner as *mut _) }
+    }
+
+    fn nprobe(&self) -> usize {
+        unsafe { bindings::faiss_IndexIVF_nprobe(self.inner as *mut _) }
+    }
+
+    fn set_nprobe(&mut self, nprobe: usize) {
+        unsafe { bindings::faiss_IndexIVF_set_nprobe(self.inner as *mut _, nprobe) }
+    }
+
+    fn quantizer(&self) -> *mut bindings::FaissIndex {
+        unsafe { bindings::faiss_IndexIVF_quantizer(self.inner as *mut _) }
+    }
+}
+
+impl IndexIVF {
+    pub fn from_index(index: crate::index::Index) -> Self {
+        let inner = index.inner;
+        std::mem::forget(index);
         Self { inner }
     }
-    pub fn new() -> Result<Self> {
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_SearchParametersIVF_new(&mut inner) })?;
-        Ok(Self { inner })
-    }
-    pub fn new_with(
-        sel: impl FaissIDSelectorTrait,
-        nprobe: usize,
-        max_codes: usize,
-    ) -> Result<Self> {
-        let sel_inner = sel.inner();
-        let mut inner = null_mut();
-        forget(sel);
-        faiss_rc(unsafe {
-            ffi::faiss_SearchParametersIVF_new_with(&mut inner, sel_inner, nprobe, max_codes)
-        })?;
-        Ok(Self { inner })
-    }
-
-    pub fn sel(&self) -> FaissIDSelectorBorrowed<'_, Self> {
-        let inner = unsafe { ffi::faiss_SearchParametersIVF_sel(self.inner) };
-        FaissIDSelectorBorrowed {
-            inner,
-            owner: std::marker::PhantomData,
-        }
-    }
-
-    pub fn nprobe(&self) -> usize {
-        unsafe { ffi::faiss_SearchParametersIVF_nprobe(self.inner) }
-    }
-    pub fn set_nprobe(&mut self, nprobe: usize) {
-        unsafe { ffi::faiss_SearchParametersIVF_set_nprobe(self.inner, nprobe) }
-    }
-
-    pub fn max_codes(&self) -> usize {
-        unsafe { ffi::faiss_SearchParametersIVF_max_codes(self.inner) }
-    }
-    pub fn set_max_codes(&mut self, max_codes: usize) {
-        unsafe { ffi::faiss_SearchParametersIVF_set_max_codes(self.inner, max_codes) }
-    }
 }
 
-pub trait FaissIndexIVFTrait: FaissIndexTrait + Sized {
-    fn nlist(&self) -> usize {
-        unsafe { ffi::faiss_IndexIVF_nlist(self.inner()) }
-    }
-    fn nprobe(&self) -> usize {
-        unsafe { ffi::faiss_IndexIVF_nprobe(self.inner()) }
-    }
-    fn set_nprobe(&mut self, nprobe: usize) {
-        unsafe { ffi::faiss_IndexIVF_set_nprobe(self.inner(), nprobe) }
-    }
-    fn quantizer(&self) -> Option<FaissIndexBorrowed<'_, Self>> {
-        let inner = unsafe { ffi::faiss_IndexIVF_quantizer(self.inner()) };
-        match inner.is_null() {
-            true => None,
-            false => Some(FaissIndexBorrowed {
-                inner,
-                owner: std::marker::PhantomData,
-            }),
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bindings::FaissMetricType;
+    use crate::index_factory::index_factory;
+    use ndarray::Array2;
+    use ndarray_rand::{rand_distr::Uniform, RandomExt};
+
+    fn generate_random_vectors(n: usize, d: usize) -> Array2<f32> {
+        Array2::random((n, d), Uniform::new(-1.0f32, 1.0f32))
     }
 
-    fn quantizer_train_alone(&self) -> i8 {
-        unsafe { ffi::faiss_IndexIVF_quantizer_trains_alone(self.inner()) }
-    }
+    #[test]
+    fn test_index_ivf_basic() {
+        let d = 32;
+        let n = 1000;
+        let nlist = 10;
+        let k = 5;
 
-    fn own_fields(&self) -> bool {
-        unsafe { ffi::faiss_IndexIVF_own_fields(self.inner()) > 0 }
-    }
-    fn set_own_fields(&mut self, own_fields: bool) {
-        unsafe { ffi::faiss_IndexIVF_set_own_fields(self.inner(), own_fields as i32) }
-    }
-    fn merge_from(&mut self, other: impl FaissIndexTrait, add_id: i64) -> Result<()> {
-        let other_inner = other.inner();
-        faiss_rc(unsafe { ffi::faiss_IndexIVF_merge_from(self.inner(), other_inner, add_id) })
-    }
+        let mut index = index_factory(
+            d as i32,
+            &format!("IVF{},Flat", nlist),
+            FaissMetricType::METRIC_L2,
+        )
+        .unwrap();
+        let mut ivf_index = IndexIVF::from_index(index);
 
-    fn copy_subset_to(&self, other: &Self, subset_type: i32, a1: i64, a2: i64) -> Result<()> {
-        faiss_rc(unsafe {
-            ffi::faiss_IndexIVF_copy_subset_to(self.inner(), other.inner(), subset_type, a1, a2)
-        })
-    }
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
 
-    #[allow(clippy::too_many_arguments)]
-    fn search_preassigned(
-        &self,
-        x: impl AsRef<[f32]>,
-        k: i64,
-        assign: impl AsRef<[i64]>,
-        centroid_dis: impl AsRef<[f32]>,
-        mut distances: impl AsMut<[f32]>,
-        mut labels: impl AsMut<[i64]>,
-        store_pairs: bool,
-    ) -> Result<()> {
-        let n = x.as_ref().len() as i64 / self.d() as i64;
-        assert_eq!(assign.as_ref().len() as i64, n * self.nprobe() as i64);
-        assert_eq!(centroid_dis.as_ref().len() as i64, n * self.nprobe() as i64);
-        assert_eq!(distances.as_mut().len() as i64, n * k);
-        assert_eq!(labels.as_mut().len() as i64, n * k);
-        faiss_rc(unsafe {
-            ffi::faiss_IndexIVF_search_preassigned(
-                self.inner(),
-                n,
-                x.as_ref().as_ptr(),
-                k,
-                assign.as_ref().as_ptr(),
-                centroid_dis.as_ref().as_ptr(),
-                distances.as_mut().as_mut_ptr(),
-                labels.as_mut().as_mut_ptr(),
-                store_pairs as i32,
+        ivf_index.train(n as i64, &data_slice).unwrap();
+        ivf_index.add(n as i64, &data_slice).unwrap();
+        assert_eq!(ivf_index.ntotal(), n as i64);
+        assert_eq!(ivf_index.nlist(), nlist);
+
+        let query = data.row(100).to_owned();
+        let mut distances = vec![0.0f32; k];
+        let mut labels = vec![-1i64; k];
+
+        ivf_index
+            .search(
+                1,
+                query.as_slice().unwrap(),
+                k as i64,
+                &mut distances,
+                &mut labels,
             )
-        })
+            .unwrap();
+
+        assert!(labels[0] >= 0);
     }
 
-    fn get_list_size(&self, list_no: usize) -> usize {
-        unsafe { ffi::faiss_IndexIVF_get_list_size(self.inner(), list_no) }
+    #[test]
+    fn test_index_ivf_nprobe() {
+        let d = 16;
+        let n = 500;
+        let nlist = 5;
+
+        let mut index = index_factory(
+            d as i32,
+            &format!("IVF{},Flat", nlist),
+            FaissMetricType::METRIC_L2,
+        )
+        .unwrap();
+        let mut ivf_index = IndexIVF::from_index(index);
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+
+        ivf_index.train(n as i64, &data_slice).unwrap();
+        ivf_index.add(n as i64, &data_slice).unwrap();
+
+        let default_nprobe = ivf_index.nprobe();
+        assert!(default_nprobe > 0);
+
+        ivf_index.set_nprobe(3);
+        assert_eq!(ivf_index.nprobe(), 3);
     }
 
-    fn make_direct_map(&mut self, direct_map: bool) -> Result<()> {
-        faiss_rc(unsafe { ffi::faiss_IndexIVF_make_direct_map(self.inner(), direct_map as i32) })
+    #[test]
+    fn test_index_ivf_add_with_ids() {
+        let d = 16;
+        let n = 200;
+        let nlist = 4;
+
+        let mut index = index_factory(
+            d as i32,
+            &format!("IVF{},Flat", nlist),
+            FaissMetricType::METRIC_L2,
+        )
+        .unwrap();
+        let mut ivf_index = IndexIVF::from_index(index);
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+        let ids: Vec<i64> = (1000..1000 + n as i64).collect();
+
+        ivf_index.train(n as i64, &data_slice).unwrap();
+        ivf_index.add_with_ids(n as i64, &data_slice, &ids).unwrap();
+        assert_eq!(ivf_index.ntotal(), n as i64);
+
+        let query = data.row(50).to_owned();
+        let mut distances = vec![0.0f32; 1];
+        let mut labels = vec![-1i64; 1];
+
+        ivf_index
+            .search(1, query.as_slice().unwrap(), 1, &mut distances, &mut labels)
+            .unwrap();
+
+        assert!(labels[0] >= 1000);
     }
 
-    fn imbalance_factor(&self) -> f64 {
-        unsafe { ffi::faiss_IndexIVF_imbalance_factor(self.inner()) }
+    #[test]
+    fn test_index_ivf_reset() {
+        let d = 8;
+        let n = 100;
+        let nlist = 4;
+
+        let mut index = index_factory(
+            d as i32,
+            &format!("IVF{},Flat", nlist),
+            FaissMetricType::METRIC_L2,
+        )
+        .unwrap();
+        let mut ivf_index = IndexIVF::from_index(index);
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+
+        ivf_index.train(n as i64, &data_slice).unwrap();
+        ivf_index.add(n as i64, &data_slice).unwrap();
+        assert_eq!(ivf_index.ntotal(), n as i64);
+
+        ivf_index.reset().unwrap();
+        assert_eq!(ivf_index.ntotal(), 0);
     }
-
-    fn print_stats(&self) {
-        unsafe { ffi::faiss_IndexIVF_print_stats(self.inner()) }
-    }
-
-    fn invlists_get_ids(&self, list_no: usize) -> i64 {
-        let mut invlist = 0i64;
-        unsafe { ffi::faiss_IndexIVF_invlists_get_ids(self.inner(), list_no, &mut invlist) };
-        invlist
-    }
-
-    fn train_encoder(&mut self, x: impl AsRef<[f32]>, assign: impl AsRef<[i64]>) -> Result<()> {
-        let n = x.as_ref().len() as i64 / self.d() as i64;
-        assert_eq!(assign.as_ref().len() as i64, n * self.nprobe() as i64);
-        faiss_rc(unsafe {
-            ffi::faiss_IndexIVF_train_encoder(
-                self.inner(),
-                n,
-                x.as_ref().as_ptr(),
-                assign.as_ref().as_ptr(),
-            )
-        })
-    }
-}
-
-pub use ffi::FaissIndexIVFStats;
-
-pub fn faiss_index_ivf_stats_reset() {
-    let stats = faiss_get_index_ivf_stats();
-    let stats: *const _ = stats;
-    unsafe { ffi::faiss_IndexIVFStats_reset(stats as *mut _) }
-}
-
-pub fn faiss_get_index_ivf_stats() -> &'static FaissIndexIVFStats {
-    unsafe { ffi::faiss_get_indexIVF_stats().as_ref() }.unwrap()
 }

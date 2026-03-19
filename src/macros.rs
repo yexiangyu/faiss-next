@@ -1,238 +1,200 @@
-macro_rules! impl_faiss_setter {
-    ($klass: ident, $setter: ident, $inner_setter: ident, $val: ident, $val_ty: ty) => {
-        impl $klass {
-            pub fn $setter(&mut self, $val: $val_ty) {
-                unsafe { faiss_next_sys::$inner_setter(self.inner, $val) }
-            }
-        }
-    };
-}
-
-macro_rules! impl_faiss_getter {
-    ($klass: ident, $getter: ident, $inner_getter: ident, $ret: ty) => {
-        impl $klass {
-            pub fn $getter(&self) -> $ret {
-                unsafe { faiss_next_sys::$inner_getter(self.inner) }
-            }
-        }
-    };
-}
-
-macro_rules! impl_faiss_new {
-    ($outer :ident, $outer_new: ident, $inner: ident, $inner_new: ident) => {
-        impl $outer {
-            pub fn $outer_new() -> crate::error::Result<Self> {
-                let mut inner = null_mut();
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_new(&mut inner) })?;
-                Self { inner }
-            }
-        }
-    };
-
-    ($outer :ident, $outer_new: ident, $inner: ident, $inner_new: ident, $arg1: ident, $arg1_ty: ty) => {
-        impl $outer {
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
-            pub fn $outer_new($arg1: $arg1_ty) -> crate::error::Result<Self> {
-                let mut inner = std::ptr::null_mut();
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_new(&mut inner, $arg1) })?;
-                Ok(Self { inner })
-            }
-        }
-    };
-
-    ($outer :ident, $outer_new: ident, $inner: ident, $inner_new: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty) => {
-        impl $outer {
-            pub fn $outer_new($arg1: $arg1_ty, $arg2: $arg2_ty) -> crate::error::Result<Self> {
-                let mut inner = std::ptr::null_mut();
-                crate::error::faiss_rc(unsafe {
-                    faiss_next_sys::$inner_new(&mut inner, $arg1, $arg2)
-                })?;
-                Ok(Self { inner })
-            }
-        }
-    };
-
-    ($outer :ident, $outer_new: ident, $inner: ident, $inner_new: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty, $arg3: ident, $arg3_ty: ty) => {
-        impl $outer {
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
-            pub fn $outer_new(
-                $arg1: $arg1_ty,
-                $arg2: $arg2_ty,
-                $arg3: $arg3_ty,
-            ) -> crate::error::Result<Self> {
-                let mut inner = std::ptr::null_mut();
-                crate::error::faiss_rc(unsafe {
-                    faiss_next_sys::$inner_new(&mut inner, $arg1, $arg2, $arg3)
-                })?;
-                Ok(Self { inner })
-            }
-        }
-    };
-
-    ($outer :ident, $outer_new: ident, $inner: ident, $inner_new: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty, $arg3: ident, $arg3_ty: ty, $arg4: ident, $arg4_ty: ty) => {
-        impl $outer {
-            pub fn $outer_new(
-                $arg1: $arg1_ty,
-                $arg2: $arg2_ty,
-                $arg3: $arg3_ty,
-                $arg4: $arg4_ty,
-            ) -> crate::error::Result<Self> {
-                let mut inner = std::ptr::null_mut();
-                crate::error::faiss_rc(unsafe {
-                    faiss_next_sys::$inner_new(&mut inner, $arg1, $arg2, $arg3, $arg4)
-                })?;
-                Ok(Self { inner })
-            }
-        }
-    };
-}
-
 macro_rules! impl_faiss_drop {
-    ($klass: ident, $drop_fun: ident) => {
-        impl Drop for $klass {
+    ($type:ident, $free_fn:ident) => {
+        impl Drop for $type {
             fn drop(&mut self) {
-                tracing::trace!(?self, "dropping");
-                unsafe { faiss_next_sys::$drop_fun(self.inner) }
+                if !self.inner.is_null() {
+                    tracing::trace!(name = stringify!($type), "dropping");
+                    unsafe { crate::bindings::$free_fn(self.inner) }
+                }
             }
         }
     };
 }
 
-macro_rules! impl_faiss_drop_as {
-    ($klass: ident, $drop_fun: ident) => {
-        impl Drop for $klass {
-            fn drop(&mut self) {
-                unsafe { faiss_next_sys::$drop_fun(self.inner as *mut _) }
+macro_rules! impl_index_common {
+    ($type:ident) => {
+        impl $type {
+            pub fn d(&self) -> i32 {
+                unsafe { crate::bindings::faiss_Index_d(self.inner) }
             }
-        }
-    };
-}
 
-macro_rules! impl_faiss_functioin_rc {
-    ($klass: ident, $fun: ident, $inner_fun: ident) => {
-        impl $klass {
-            pub fn $fun(&self) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_fun(self.inner) })
+            pub fn ntotal(&self) -> i64 {
+                unsafe { crate::bindings::faiss_Index_ntotal(self.inner) }
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty) => {
-        impl $klass {
-            pub fn $fun(&self, $arg1: $arg1_ty) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_fun(self.inner, $arg1) })
+            pub fn is_trained(&self) -> bool {
+                unsafe { crate::bindings::faiss_Index_is_trained(self.inner) != 0 }
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty) => {
-        impl $klass {
-            pub fn $fun(&self, $arg1: $arg1_ty, $arg2: $arg2_ty) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe {
-                    faiss_next_sys::$inner_fun(self.inner, $arg1, $arg2)
+            pub fn metric_type(&self) -> crate::bindings::FaissMetricType {
+                unsafe { crate::bindings::faiss_Index_metric_type(self.inner) }
+            }
+
+            pub fn verbose(&self) -> bool {
+                unsafe { crate::bindings::faiss_Index_verbose(self.inner) != 0 }
+            }
+
+            pub fn set_verbose(&mut self, verbose: bool) {
+                unsafe { crate::bindings::faiss_Index_set_verbose(self.inner, verbose as i32) }
+            }
+
+            pub fn train(&mut self, n: i64, x: &[f32]) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_Index_train(self.inner, n, x.as_ptr())
                 })
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty, $arg3: ident, $arg3_ty: ty) => {
-        impl $klass {
-            pub fn $fun(
-                &self,
-                $arg1: $arg1_ty,
-                $arg2: $arg2_ty,
-                $arg3: $arg3_ty,
+            pub fn add(&mut self, n: i64, x: &[f32]) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_Index_add(self.inner, n, x.as_ptr())
+                })
+            }
+
+            pub fn add_with_ids(
+                &mut self,
+                n: i64,
+                x: &[f32],
+                ids: &[i64],
             ) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe {
-                    faiss_next_sys::$inner_fun(self.inner, $arg1, $arg2, $arg3)
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_Index_add_with_ids(
+                        self.inner,
+                        n,
+                        x.as_ptr(),
+                        ids.as_ptr(),
+                    )
                 })
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty, $arg3: ident, $arg3_ty: ty, $arg4: ident, $arg4_ty: ty) => {
-        impl $klass {
-            #[allow(clippy::not_unsafe_ptr_arg_deref)]
-            pub fn $fun(
+            pub fn search(
                 &self,
-                $arg1: $arg1_ty,
-                $arg2: $arg2_ty,
-                $arg3: $arg3_ty,
-                $arg4: $arg4_ty,
+                n: i64,
+                x: &[f32],
+                k: i64,
+                distances: &mut [f32],
+                labels: &mut [i64],
             ) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe {
-                    faiss_next_sys::$inner_fun(self.inner, $arg1, $arg2, $arg3, $arg4)
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_Index_search(
+                        self.inner,
+                        n,
+                        x.as_ptr(),
+                        k,
+                        distances.as_mut_ptr(),
+                        labels.as_mut_ptr(),
+                    )
+                })
+            }
+
+            pub fn range_search(
+                &self,
+                n: i64,
+                x: &[f32],
+                radius: f32,
+                result: &mut crate::bindings::FaissRangeSearchResult,
+            ) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_Index_range_search(
+                        self.inner,
+                        n,
+                        x.as_ptr(),
+                        radius,
+                        result,
+                    )
+                })
+            }
+
+            pub fn reset(&mut self) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_Index_reset(self.inner)
+                })
+            }
+
+            pub fn reconstruct(&self, key: i64, recons: &mut [f32]) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_Index_reconstruct(self.inner, key, recons.as_mut_ptr())
                 })
             }
         }
     };
 }
 
-macro_rules! impl_faiss_functioin_static_rc {
-    ($klass: ident, $fun: ident, $inner_fun: ident) => {
-        impl $klass {
-            fn $fun() -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_fun(self.inner) })
+macro_rules! impl_index_binary_common {
+    ($type:ident) => {
+        impl $type {
+            pub fn d(&self) -> i32 {
+                unsafe { crate::bindings::faiss_IndexBinary_d(self.inner) }
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty) => {
-        impl $klass {
-            fn $fun($arg1: $arg1_ty) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_fun(self.inner, $arg1) })
+            pub fn ntotal(&self) -> i64 {
+                unsafe { crate::bindings::faiss_IndexBinary_ntotal(self.inner) }
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty) => {
-        impl $klass {
-            fn $fun($arg1: $arg1_ty, $arg2: $arg2_ty) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_fun($arg1, $arg2) })
+            pub fn is_trained(&self) -> bool {
+                unsafe { crate::bindings::faiss_IndexBinary_is_trained(self.inner) != 0 }
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty, $arg3: ident, $arg3_ty: ty) => {
-        impl $klass {
-            fn $fun($arg1: $arg1_ty, $arg2: $arg2_ty, $arg3: $arg3_ty) -> crate::error::Result<()> {
-                crate::error::faiss_rc(unsafe { faiss_next_sys::$inner_fun($arg1, $arg2, $arg3) })
+            pub fn metric_type(&self) -> crate::bindings::FaissMetricType {
+                unsafe { crate::bindings::faiss_IndexBinary_metric_type(self.inner) }
             }
-        }
-    };
-}
 
-macro_rules! impl_faiss_functioin_void {
-    ($klass: ident, $fun: ident, $inner_fun: ident) => {
-        impl $klass {
-            pub fn $fun(&self) {
-                unsafe { faiss_next_sys::$inner_fun(self.inner) }
+            pub fn train(&mut self, n: i64, x: &[u8]) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_IndexBinary_train(self.inner, n, x.as_ptr())
+                })
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty) => {
-        impl $klass {
-            fn $fun(&self, $arg1: $arg1_ty) {
-                unsafe { faiss_next_sys::$inner_fun(self.inner, $arg1) }
+            pub fn add(&mut self, n: i64, x: &[u8]) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_IndexBinary_add(self.inner, n, x.as_ptr())
+                })
             }
-        }
-    };
 
-    ($klass: ident, $fun: ident, $inner_fun: ident, $arg1: ident, $arg1_ty: ty, $arg2: ident, $arg2_ty: ty) => {
-        impl $klass {
-            fn $fun(&self, $arg1: $arg1_ty, $arg2: $arg2_ty) {
-                unsafe { faiss_next_sys::$inner_fun(self.inner, $arg1, $arg2) }
+            pub fn add_with_ids(
+                &mut self,
+                n: i64,
+                x: &[u8],
+                ids: &[i64],
+            ) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_IndexBinary_add_with_ids(
+                        self.inner,
+                        n,
+                        x.as_ptr(),
+                        ids.as_ptr(),
+                    )
+                })
+            }
+
+            pub fn search(
+                &self,
+                n: i64,
+                x: &[u8],
+                k: i64,
+                distances: &mut [i32],
+                labels: &mut [i64],
+            ) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_IndexBinary_search(
+                        self.inner,
+                        n,
+                        x.as_ptr(),
+                        k,
+                        distances.as_mut_ptr(),
+                        labels.as_mut_ptr(),
+                    )
+                })
+            }
+
+            pub fn reset(&mut self) -> crate::error::Result<()> {
+                crate::error::check_return_code(unsafe {
+                    crate::bindings::faiss_IndexBinary_reset(self.inner)
+                })
             }
         }
     };
 }
 
 pub(crate) use impl_faiss_drop;
-pub(crate) use impl_faiss_drop_as;
-pub(crate) use impl_faiss_functioin_rc;
-pub(crate) use impl_faiss_functioin_static_rc;
-pub(crate) use impl_faiss_functioin_void;
-pub(crate) use impl_faiss_getter;
-pub(crate) use impl_faiss_new;
-pub(crate) use impl_faiss_setter;
+pub(crate) use impl_index_binary_common;
+pub(crate) use impl_index_common;

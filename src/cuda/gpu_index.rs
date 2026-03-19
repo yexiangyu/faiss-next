@@ -1,39 +1,99 @@
-use faiss_next_sys as ffi;
+use std::ptr;
 
-use crate::{
-    error::*,
-    index::{FaissIndexOwned, FaissIndexTrait},
-    macros::impl_faiss_drop,
-};
-use std::ptr::null_mut;
+use crate::bindings;
+use crate::cuda::gpu_resources::GpuResourcesProvider;
+use crate::error::{check_return_code, Result};
+use crate::index::Index;
+use crate::traits::FaissIndex;
 
-#[derive(Debug)]
-pub struct FaissGpuIndexConfig {
-    inner: *mut ffi::FaissGpuIndexConfig,
+pub struct GpuIndex {
+    pub(crate) inner: *mut bindings::FaissIndex,
 }
 
-impl FaissGpuIndexConfig {
-    pub fn device(&self) -> i32 {
-        unsafe { ffi::faiss_GpuIndexConfig_device(self.inner) }
+impl Drop for GpuIndex {
+    fn drop(&mut self) {
+        if !self.inner.is_null() {
+            unsafe { bindings::faiss_GpuIndex_free(self.inner) }
+        }
     }
 }
 
-pub trait FaissGpuIndexTrait: FaissIndexTrait {
-    fn to_cpu(&self) -> Result<FaissIndexOwned> {
-        let mut inner = null_mut();
-        faiss_rc(unsafe { ffi::faiss_index_gpu_to_cpu(self.inner(), &mut inner) })?;
-        Ok(FaissIndexOwned { inner })
-    }
-}
-
-#[derive(Debug)]
-pub struct FaissGpuIndexOwned {
-    pub inner: *mut ffi::FaissIndex,
-}
-impl_faiss_drop!(FaissGpuIndexOwned, faiss_Index_free);
-impl FaissIndexTrait for FaissGpuIndexOwned {
-    fn inner(&self) -> *mut ffi::FaissIndex {
+impl FaissIndex for GpuIndex {
+    fn inner(&self) -> *mut bindings::FaissIndex {
         self.inner
     }
+
+    fn train(&mut self, n: i64, x: &[f32]) -> Result<()> {
+        check_return_code(unsafe { bindings::faiss_Index_train(self.inner, n, x.as_ptr()) })
+    }
+
+    fn add(&mut self, n: i64, x: &[f32]) -> Result<()> {
+        check_return_code(unsafe { bindings::faiss_Index_add(self.inner, n, x.as_ptr()) })
+    }
+
+    fn add_with_ids(&mut self, n: i64, x: &[f32], ids: &[i64]) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_add_with_ids(self.inner, n, x.as_ptr(), ids.as_ptr())
+        })
+    }
+
+    fn search(
+        &self,
+        n: i64,
+        x: &[f32],
+        k: i64,
+        distances: &mut [f32],
+        labels: &mut [i64],
+    ) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_search(
+                self.inner,
+                n,
+                x.as_ptr(),
+                k,
+                distances.as_mut_ptr(),
+                labels.as_mut_ptr(),
+            )
+        })
+    }
+
+    fn range_search(
+        &self,
+        n: i64,
+        x: &[f32],
+        radius: f32,
+        result: *mut bindings::FaissRangeSearchResult,
+    ) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_range_search(self.inner, n, x.as_ptr(), radius, result)
+        })
+    }
+
+    fn reset(&mut self) -> Result<()> {
+        check_return_code(unsafe { bindings::faiss_Index_reset(self.inner) })
+    }
+
+    fn reconstruct(&self, key: i64, recons: &mut [f32]) -> Result<()> {
+        check_return_code(unsafe {
+            bindings::faiss_Index_reconstruct(self.inner, key, recons.as_mut_ptr())
+        })
+    }
 }
-impl FaissGpuIndexTrait for FaissGpuIndexOwned {}
+
+pub fn index_cpu_to_gpu(
+    resources: &impl GpuResourcesProvider,
+    device: i32,
+    index: &Index,
+) -> Result<GpuIndex> {
+    let mut inner = ptr::null_mut();
+    check_return_code(unsafe {
+        bindings::faiss_index_cpu_to_gpu(resources.inner(), device, index.inner, &mut inner)
+    })?;
+    Ok(GpuIndex { inner })
+}
+
+pub fn index_gpu_to_cpu(index: &GpuIndex) -> Result<Index> {
+    let mut inner = ptr::null_mut();
+    check_return_code(unsafe { bindings::faiss_index_gpu_to_cpu(index.inner, &mut inner) })?;
+    Ok(Index { inner })
+}

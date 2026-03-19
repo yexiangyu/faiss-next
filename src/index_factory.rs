@@ -1,54 +1,191 @@
-use faiss_next_sys::{self as ffi, FaissMetricType};
+use std::ffi::CString;
+use std::ptr;
 
-use crate::{error::*, index::FaissIndexOwned, index_binary::FaissIndexBinaryOwned};
+use crate::bindings::FaissMetricType;
+use crate::error::{check_return_code, Result};
+use crate::index::Index;
 
-/// build index with factory function
-/// ```rust
-/// use faiss_next::prelude::*;
-/// use itertools::Itertools;
-/// use ndarray::{Array2, s};
-/// use ndarray_rand::{rand_distr::Uniform, RandomExt};
-///
-/// let index = faiss_index_factory(128, "Flat", FaissMetricType::METRIC_L2).unwrap();
-/// let mut index = FaissIndexFlat::downcast(index).unwrap();
-/// let base = Array2::<f32>::random((1024, 128), Uniform::new(-1.0, 1.0));
-///
-/// let query = base.slice(s![42..43, ..]);
-///
-/// index.add(base.as_slice().unwrap()).unwrap();
-///
-/// let mut distances = vec![0.0];
-/// let mut labels = vec![-1];
-///
-/// index.search(query.as_slice().unwrap(), 1, &mut distances, &mut labels).unwrap();
-/// assert_eq!(labels, &[42]);
-/// assert_eq!(index.xb().len(), 1024 * 128);
-/// ```
-pub fn faiss_index_factory(
-    d: i32,
-    description: impl AsRef<str>,
-    metric: FaissMetricType,
-) -> Result<FaissIndexOwned> {
-    let description = description.as_ref();
-    let description = std::ffi::CString::new(description).unwrap();
-    let mut index = std::ptr::null_mut();
-    crate::error::faiss_rc(unsafe {
-        ffi::faiss_index_factory(&mut index, d, description.as_ptr(), metric)
+pub fn index_factory(d: i32, description: &str, metric: FaissMetricType) -> Result<Index> {
+    let c_description = CString::new(description)?;
+    let mut inner = ptr::null_mut();
+    check_return_code(unsafe {
+        crate::bindings::faiss_index_factory(&mut inner, d, c_description.as_ptr(), metric)
     })?;
-    Ok(FaissIndexOwned { inner: index })
+    Ok(Index { inner })
 }
 
-pub fn faiss_index_binary_factory(
-    d: i32,
-    description: impl AsRef<str>,
-) -> Result<FaissIndexBinaryOwned> {
-    let description = description.as_ref();
-    let description = std::ffi::CString::new(description).unwrap();
-    let mut inner = std::ptr::null_mut();
-    faiss_rc(ffi::extension::faiss_index_binary_factory(
-        d,
-        description.as_ptr(),
-        &mut inner,
-    ))?;
-    Ok(FaissIndexBinaryOwned { inner })
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array2;
+    use ndarray_rand::{rand_distr::Uniform, RandomExt};
+
+    fn generate_random_vectors(n: usize, d: usize) -> Array2<f32> {
+        Array2::random((n, d), Uniform::new(-1.0f32, 1.0f32))
+    }
+
+    #[test]
+    fn test_index_factory_flat() {
+        let d = 32;
+        let n = 100;
+        let k = 5;
+
+        let mut index = index_factory(d as i32, "Flat", FaissMetricType::METRIC_L2).unwrap();
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+
+        index.add(n as i64, &data_slice).unwrap();
+        assert_eq!(index.ntotal(), n as i64);
+        assert_eq!(index.d(), d as i32);
+
+        let query = data.row(50).to_owned();
+        let mut distances = vec![0.0f32; k];
+        let mut labels = vec![-1i64; k];
+
+        index
+            .search(
+                1,
+                query.as_slice().unwrap(),
+                k as i64,
+                &mut distances,
+                &mut labels,
+            )
+            .unwrap();
+
+        assert_eq!(labels[0], 50);
+    }
+
+    #[test]
+    fn test_index_factory_ivf_flat() {
+        let d = 32;
+        let n = 1000;
+        let k = 10;
+        let nlist = 10;
+
+        let mut index = index_factory(
+            d as i32,
+            &format!("IVF{},Flat", nlist),
+            FaissMetricType::METRIC_L2,
+        )
+        .unwrap();
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+
+        index.train(n as i64, &data_slice).unwrap();
+        index.add(n as i64, &data_slice).unwrap();
+        assert_eq!(index.ntotal(), n as i64);
+
+        let query = data.row(100).to_owned();
+        let mut distances = vec![0.0f32; k];
+        let mut labels = vec![-1i64; k];
+
+        index
+            .search(
+                1,
+                query.as_slice().unwrap(),
+                k as i64,
+                &mut distances,
+                &mut labels,
+            )
+            .unwrap();
+
+        assert!(labels[0] >= 0);
+    }
+
+    #[test]
+    fn test_index_factory_pq() {
+        let d = 32;
+        let n = 500;
+        let k = 5;
+
+        let mut index = index_factory(d as i32, "PQ16", FaissMetricType::METRIC_L2).unwrap();
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+
+        index.train(n as i64, &data_slice).unwrap();
+        index.add(n as i64, &data_slice).unwrap();
+        assert_eq!(index.ntotal(), n as i64);
+
+        let query = data.row(42).to_owned();
+        let mut distances = vec![0.0f32; k];
+        let mut labels = vec![-1i64; k];
+
+        index
+            .search(
+                1,
+                query.as_slice().unwrap(),
+                k as i64,
+                &mut distances,
+                &mut labels,
+            )
+            .unwrap();
+
+        assert!(labels[0] >= 0);
+    }
+
+    #[test]
+    fn test_index_factory_ivf_pq() {
+        let d = 32;
+        let n = 1000;
+        let k = 5;
+
+        let mut index = index_factory(d as i32, "IVF10,PQ8", FaissMetricType::METRIC_L2).unwrap();
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+
+        index.train(n as i64, &data_slice).unwrap();
+        index.add(n as i64, &data_slice).unwrap();
+        assert_eq!(index.ntotal(), n as i64);
+
+        let query = data.row(200).to_owned();
+        let mut distances = vec![0.0f32; k];
+        let mut labels = vec![-1i64; k];
+
+        index
+            .search(
+                1,
+                query.as_slice().unwrap(),
+                k as i64,
+                &mut distances,
+                &mut labels,
+            )
+            .unwrap();
+
+        assert!(labels[0] >= 0);
+    }
+
+    #[test]
+    fn test_index_factory_hnsw() {
+        let d = 16;
+        let n = 200;
+        let k = 5;
+
+        let mut index = index_factory(d as i32, "HNSW32", FaissMetricType::METRIC_L2).unwrap();
+
+        let data = generate_random_vectors(n, d);
+        let data_slice: Vec<f32> = data.iter().copied().collect();
+
+        index.add(n as i64, &data_slice).unwrap();
+        assert_eq!(index.ntotal(), n as i64);
+
+        let query = data.row(100).to_owned();
+        let mut distances = vec![0.0f32; k];
+        let mut labels = vec![-1i64; k];
+
+        index
+            .search(
+                1,
+                query.as_slice().unwrap(),
+                k as i64,
+                &mut distances,
+                &mut labels,
+            )
+            .unwrap();
+
+        assert_eq!(labels[0], 100);
+    }
 }
