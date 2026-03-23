@@ -16,6 +16,25 @@ Rust bindings for [Faiss](https://github.com/facebookresearch/faiss) (Facebook A
 - **Clustering**: K-means clustering with customizable parameters
 - **Pairwise Operations**: Efficient distance computations (L2, inner product)
 
+## Platform Support
+
+| OS | Architecture | CPU | CUDA |
+|----|--------------|-----|------|
+| macOS (Apple Silicon) | aarch64 (M1/M2/M3) | ✅ | ❌ |
+| macOS (Intel) | x86_64 | ⚠️ | ❌ |
+| Linux | x86_64 | ✅ | ✅ |
+| Linux | aarch64 | ⚠️ | ❌ |
+| Windows | x86_64 | ⚠️ | ⚠️ |
+
+**Legend:**
+- ✅ Fully supported with pre-generated bindings
+- ⚠️ May work with `bindgen` feature to generate bindings at compile time
+- ❌ Not supported
+
+**Notes:**
+- CUDA is only supported on Linux x86_64
+- For unsupported platforms, enable `bindgen` feature: `faiss-next = { version = "0.6", features = ["bindgen"] }`
+
 ## Supported Index Types
 
 | Index Type | Description |

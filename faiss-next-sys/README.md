@@ -17,11 +17,22 @@ This crate provides unsafe Rust bindings to the Faiss C library. For a safe, idi
 
 ## Supported Platforms
 
-| OS | Architecture | CUDA |
-|----|--------------|------|
-| macOS | aarch64 (M1/M2) | No |
-| macOS | x86_64 | No |
-| Linux | x86_64 | Yes |
+| OS | Architecture | CPU | CUDA |
+|----|--------------|-----|------|
+| macOS (Apple Silicon) | aarch64 (M1/M2/M3) | ✅ | ❌ |
+| macOS (Intel) | x86_64 | ⚠️ | ❌ |
+| Linux | x86_64 | ✅ | ✅ |
+| Linux | aarch64 | ⚠️ | ❌ |
+| Windows | x86_64 | ⚠️ | ⚠️ |
+
+**Legend:**
+- ✅ Fully supported with pre-generated bindings
+- ⚠️ May work with `bindgen` feature to generate bindings at compile time
+- ❌ Not supported
+
+**Notes:**
+- CUDA is only supported on Linux x86_64
+- For unsupported platforms, enable `bindgen` feature
 
 ## Getting Started
 
@@ -101,7 +112,7 @@ src/bindings/
 └── v1_14/
     ├── mod.rs          # Platform selection
     ├── macos_aarch64.rs
-    ├── macos_x86_64.rs
+    ├── macos_aarch64_cuda.rs
     ├── linux_x86_64.rs
     └── linux_x86_64_cuda.rs
 ```
