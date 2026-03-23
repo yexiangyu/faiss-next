@@ -1,6 +1,7 @@
 use faiss_next::{
     index_factory, read_index, write_index, Clustering, ClusteringParameters, Index, IndexBuilder,
     IndexFlat, IndexIDMap, IndexIVF, IndexIVFFlat, IndexLSH, IvfIndex, MetricType,
+    SearchParameters, SearchParametersIvf, SearchParams,
 };
 use std::path::Path;
 
@@ -388,4 +389,42 @@ fn test_compute_residual() {
 
     let residual = index.compute_residual(&query, result.labels[0]).unwrap();
     assert_eq!(residual.len(), d as usize);
+}
+
+#[test]
+fn test_search_with_params() {
+    let d = 32u32;
+    let n = 100usize;
+
+    let mut index = IndexFlat::new_l2(d).unwrap();
+    let data = generate_unique_data(n, d as usize, 555);
+    index.add(&data).unwrap();
+
+    let query: Vec<f32> = data[0..d as usize].to_vec();
+    let params = SearchParameters::new().unwrap();
+    let result = index.search_with_params(&query, 5, &params).unwrap();
+
+    assert_eq!(result.labels.len(), 5);
+    assert_eq!(result.labels[0].get(), Some(0));
+}
+
+#[test]
+fn test_search_with_params_ivf() {
+    let d = 32u32;
+    let nlist = 10usize;
+    let n = 1000usize;
+
+    let mut index = index_factory(d, &format!("IVF{},Flat", nlist), MetricType::L2).unwrap();
+    let data = generate_unique_data(n, d as usize, 666);
+
+    index.train(&data).unwrap();
+    index.add(&data).unwrap();
+
+    let query: Vec<f32> = data[0..d as usize].to_vec();
+
+    let mut params = SearchParametersIvf::new().unwrap();
+    params.set_nprobe(5);
+
+    let result = index.search_with_params(&query, 10, &params).unwrap();
+    assert_eq!(result.labels.len(), 10);
 }

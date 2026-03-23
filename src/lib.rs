@@ -9,6 +9,7 @@ pub mod io;
 pub mod metric;
 pub mod pairwise;
 pub mod result;
+pub mod search_params;
 
 #[cfg(all(target_os = "linux", feature = "cuda"))]
 pub mod gpu;
@@ -32,6 +33,7 @@ pub use pairwise::{
     set_distance_compute_blas_threshold,
 };
 pub use result::{BinarySearchResult, RangeSearchResult, SearchResult};
+pub use search_params::{SearchParameters, SearchParametersIvf, SearchParams};
 
 #[cfg(all(target_os = "linux", feature = "cuda"))]
 pub use gpu::{GpuIndexImpl, GpuResources};

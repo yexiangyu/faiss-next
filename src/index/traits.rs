@@ -80,6 +80,32 @@ pub trait Index {
         Ok(SearchResult::new(distances, labels))
     }
 
+    fn search_with_params<P: crate::search_params::SearchParams>(
+        &mut self,
+        q: &[f32],
+        k: usize,
+        params: &P,
+    ) -> Result<SearchResult> {
+        let d = self.d() as usize;
+        let nq = q.len() / d;
+        let mut distances = vec![0.0f32; nq * k];
+        let mut labels = vec![Idx::NONE; nq * k];
+
+        check_return_code(unsafe {
+            faiss_next_sys::faiss_Index_search_with_params(
+                self.inner_ptr(),
+                nq as i64,
+                q.as_ptr(),
+                k as i64,
+                params.as_ptr(),
+                distances.as_mut_ptr(),
+                labels.as_mut_ptr() as *mut i64,
+            )
+        })?;
+
+        Ok(SearchResult::new(distances, labels))
+    }
+
     fn range_search(&mut self, q: &[f32], radius: f32) -> Result<RangeSearchResult> {
         let d = self.d() as usize;
         let nq = q.len() / d;
