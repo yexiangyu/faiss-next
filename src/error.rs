@@ -1,38 +1,57 @@
-use std::ffi::CStr;
+use std::ffi::{CStr, NulError};
+use std::io;
 
-use crate::bindings;
+use faiss_next_sys;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("faiss error (code={code}): {message}")]
-    Faiss { code: i32, message: String },
-    #[error("null pointer encountered")]
-    NullPointer,
-    #[error("index not trained")]
+    #[error("Faiss native error (code={code}): {message}")]
+    Native { code: i32, message: String },
+
+    #[error("Invalid index description: {0}")]
+    InvalidDescription(String),
+
+    #[error("Index not trained")]
     NotTrained,
-    #[error("index is empty")]
+
+    #[error("Index is empty")]
     EmptyIndex,
-    #[error("invalid dimension: expected {expected}, got {actual}")]
+
+    #[error("Invalid dimension: expected {expected}, got {actual}")]
     InvalidDimension { expected: usize, actual: usize },
-    #[error("invalid parameter: {0}")]
+
+    #[error("Invalid parameter: {0}")]
     InvalidParameter(String),
+
+    #[error("Invalid cast to {target}: {reason}")]
+    InvalidCast {
+        target: &'static str,
+        reason: String,
+    },
+
+    #[error("Null pointer encountered")]
+    NullPointer,
+
+    #[error("Index does not support operation: {0}")]
+    UnsupportedOperation(&'static str),
+
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(#[from] io::Error),
+
     #[error("UTF-8 error: {0}")]
-    Utf8(#[from] std::ffi::NulError),
+    Utf8(#[from] NulError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-const FAISS_OK: i32 = 0;
-
-pub fn check_return_code(code: i32) -> Result<()> {
-    if code == FAISS_OK {
+#[inline]
+pub(crate) fn check_return_code(code: i32) -> Result<()> {
+    if code == faiss_next_sys::FAISS_OK {
         return Ok(());
     }
 
     let message = unsafe {
-        let ptr = bindings::faiss_get_last_error();
+        let ptr = faiss_next_sys::faiss_get_last_error();
         if ptr.is_null() {
             "unknown error".to_string()
         } else {
@@ -43,5 +62,25 @@ pub fn check_return_code(code: i32) -> Result<()> {
         }
     };
 
-    Err(Error::Faiss { code, message })
+    Err(Error::Native { code, message })
+}
+
+impl Error {
+    pub fn native(code: i32, message: impl Into<String>) -> Self {
+        Error::Native {
+            code,
+            message: message.into(),
+        }
+    }
+
+    pub fn invalid_cast(target: &'static str, reason: impl Into<String>) -> Self {
+        Error::InvalidCast {
+            target,
+            reason: reason.into(),
+        }
+    }
+
+    pub fn unsupported(operation: &'static str) -> Self {
+        Error::UnsupportedOperation(operation)
+    }
 }

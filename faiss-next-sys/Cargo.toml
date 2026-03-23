@@ -1,0 +1,18 @@
+[package]
+name = "faiss-next-sys"
+version = "0.6.0"
+edition = "2021"
+description = "Raw FFI bindings to Faiss (Facebook AI Similarity Search)"
+license = "MIT"
+links = "faiss"
+
+[features]
+default = []
+cuda = []
+bindgen = ["dep:bindgen"]
+
+[build-dependencies]
+bindgen = { version = "0.70", optional = true }
+pkg-config = { version = "0.3", optional = true }
+
+[dev-dependencies]

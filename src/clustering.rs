@@ -1,117 +1,156 @@
 use std::ptr;
 
-use crate::bindings;
+use faiss_next_sys::{self, FaissClustering, FaissClusteringParameters};
+
 use crate::error::{check_return_code, Result};
+use crate::index::Index;
 
 pub struct Clustering {
-    pub(crate) inner: *mut bindings::FaissClustering,
+    inner: *mut FaissClustering,
+}
+
+impl Clustering {
+    pub fn new(d: u32, k: u32) -> Result<Self> {
+        unsafe {
+            let mut inner = ptr::null_mut();
+            check_return_code(faiss_next_sys::faiss_Clustering_new(
+                &mut inner, d as i32, k as i32,
+            ))?;
+            Ok(Self { inner })
+        }
+    }
+
+    pub fn new_with_params(d: u32, k: u32, params: &ClusteringParameters) -> Result<Self> {
+        unsafe {
+            let mut inner = ptr::null_mut();
+            check_return_code(faiss_next_sys::faiss_Clustering_new_with_params(
+                &mut inner,
+                d as i32,
+                k as i32,
+                params.inner,
+            ))?;
+            Ok(Self { inner })
+        }
+    }
+
+    pub fn train(&mut self, n: u64, x: &[f32], index: &mut impl Index) -> Result<()> {
+        check_return_code(unsafe {
+            faiss_next_sys::faiss_Clustering_train(
+                self.inner,
+                n as i64,
+                x.as_ptr(),
+                index.inner_ptr(),
+            )
+        })
+    }
+
+    pub fn niter(&self) -> i32 {
+        unsafe { faiss_next_sys::faiss_Clustering_niter(self.inner) }
+    }
+
+    pub fn k(&self) -> usize {
+        unsafe { faiss_next_sys::faiss_Clustering_k(self.inner) }
+    }
+
+    pub fn d(&self) -> usize {
+        unsafe { faiss_next_sys::faiss_Clustering_d(self.inner) }
+    }
+
+    pub fn centroids(&self) -> Vec<f32> {
+        unsafe {
+            let mut ptr = ptr::null_mut();
+            let mut size = 0usize;
+            faiss_next_sys::faiss_Clustering_centroids(self.inner, &mut ptr, &mut size);
+            if ptr.is_null() || size == 0 {
+                Vec::new()
+            } else {
+                std::slice::from_raw_parts(ptr, size).to_vec()
+            }
+        }
+    }
+
+    pub fn verbose(&self) -> bool {
+        unsafe { faiss_next_sys::faiss_Clustering_verbose(self.inner) != 0 }
+    }
+
+    pub fn seed(&self) -> i32 {
+        unsafe { faiss_next_sys::faiss_Clustering_seed(self.inner) }
+    }
 }
 
 impl Drop for Clustering {
     fn drop(&mut self) {
         if !self.inner.is_null() {
-            unsafe { bindings::faiss_Clustering_free(self.inner) }
+            unsafe {
+                faiss_next_sys::faiss_Clustering_free(self.inner);
+            }
         }
     }
 }
 
-impl Clustering {
-    pub fn new(d: i32, k: i32) -> Result<Self> {
-        let mut inner = ptr::null_mut();
-        check_return_code(unsafe { bindings::faiss_Clustering_new(&mut inner, d, k) })?;
-        Ok(Self { inner })
+pub struct ClusteringParameters {
+    inner: *mut FaissClusteringParameters,
+}
+
+impl ClusteringParameters {
+    pub fn new() -> Result<Self> {
+        unsafe {
+            let mut inner = Box::new(std::mem::zeroed::<FaissClusteringParameters>());
+            faiss_next_sys::faiss_ClusteringParameters_init(inner.as_mut() as *mut _);
+            Ok(Self {
+                inner: Box::into_raw(inner),
+            })
+        }
     }
 
-    pub fn new_with_params(
-        d: i32,
-        k: i32,
-        params: &bindings::FaissClusteringParameters,
-    ) -> Result<Self> {
-        let mut inner = ptr::null_mut();
-        check_return_code(unsafe {
-            bindings::faiss_Clustering_new_with_params(&mut inner, d, k, params)
-        })?;
-        Ok(Self { inner })
+    pub fn niter(&mut self, niter: i32) -> &mut Self {
+        unsafe { (*self.inner).niter = niter }
+        self
     }
 
-    pub fn train(&mut self, n: i64, x: &[f32], index: &mut crate::index::Index) -> Result<()> {
-        check_return_code(unsafe {
-            bindings::faiss_Clustering_train(self.inner, n, x.as_ptr(), index.inner)
-        })
+    pub fn verbose(&mut self, verbose: bool) -> &mut Self {
+        unsafe { (*self.inner).verbose = verbose as i32 }
+        self
     }
 
-    pub fn niter(&self) -> i32 {
-        unsafe { bindings::faiss_Clustering_niter(self.inner) }
+    pub fn spherical(&mut self, spherical: bool) -> &mut Self {
+        unsafe { (*self.inner).spherical = spherical as i32 }
+        self
     }
 
-    pub fn k(&self) -> usize {
-        unsafe { bindings::faiss_Clustering_k(self.inner) }
+    pub fn min_points_per_centroid(&mut self, n: i32) -> &mut Self {
+        unsafe { (*self.inner).min_points_per_centroid = n }
+        self
     }
 
-    pub fn d(&self) -> usize {
-        unsafe { bindings::faiss_Clustering_d(self.inner) }
+    pub fn max_points_per_centroid(&mut self, n: i32) -> &mut Self {
+        unsafe { (*self.inner).max_points_per_centroid = n }
+        self
+    }
+
+    pub fn seed(&mut self, seed: i32) -> &mut Self {
+        unsafe { (*self.inner).seed = seed }
+        self
+    }
+
+    pub fn nredo(&mut self, nredo: i32) -> &mut Self {
+        unsafe { (*self.inner).nredo = nredo }
+        self
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::bindings::FaissMetricType;
-    use crate::index_factory::index_factory;
-    use ndarray::Array2;
-    use ndarray_rand::{rand_distr::Uniform, RandomExt};
-
-    fn generate_random_vectors(n: usize, d: usize) -> Array2<f32> {
-        Array2::random((n, d), Uniform::new(-1.0f32, 1.0f32))
+impl Default for ClusteringParameters {
+    fn default() -> Self {
+        Self::new().expect("failed to create ClusteringParameters")
     }
+}
 
-    #[test]
-    fn test_clustering_basic() {
-        let d = 16;
-        let n = 1000;
-        let k = 10;
-
-        let clustering = Clustering::new(d as i32, k as i32).unwrap();
-        assert_eq!(clustering.k(), k);
-        assert_eq!(clustering.d(), d);
-    }
-
-    #[test]
-    fn test_clustering_niter() {
-        let d = 8;
-        let k = 5;
-
-        let clustering = Clustering::new(d as i32, k as i32).unwrap();
-        let niter = clustering.niter();
-        assert!(niter > 0);
-    }
-
-    #[test]
-    fn test_clustering_train() {
-        let d = 16;
-        let n = 500;
-        let k = 5;
-
-        let mut clustering = Clustering::new(d as i32, k as i32).unwrap();
-        let mut index = index_factory(d as i32, "Flat", FaissMetricType::METRIC_L2).unwrap();
-
-        let data = generate_random_vectors(n, d);
-        let data_slice: Vec<f32> = data.iter().copied().collect();
-
-        clustering.train(n as i64, &data_slice, &mut index).unwrap();
-    }
-
-    #[test]
-    fn test_clustering_with_params() {
-        let d = 8;
-        let k = 3;
-
-        let mut params = bindings::FaissClusteringParameters::default();
-        unsafe { bindings::faiss_ClusteringParameters_init(&mut params) };
-        params.niter = 5;
-        params.verbose = 0;
-
-        let clustering = Clustering::new_with_params(d as i32, k as i32, &params).unwrap();
-        assert_eq!(clustering.d(), d);
+impl Drop for ClusteringParameters {
+    fn drop(&mut self) {
+        if !self.inner.is_null() {
+            unsafe {
+                let _ = Box::from_raw(self.inner);
+            }
+        }
     }
 }

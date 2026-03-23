@@ -9,18 +9,17 @@ categories = ["science", "algorithms", "api-bindings"]
 
 [features]
 default = []
-cuda = []
-bindgen = ["dep:bindgen"]
+cuda = ["faiss-next-sys/cuda"]
+bindgen = ["faiss-next-sys/bindgen"]
 
 [dependencies]
-cxx = "1.0"
+faiss-next-sys = { path = "faiss-next-sys", version = "0.6.0" }
 thiserror = "1.0"
 tracing = "0.1"
-
-[build-dependencies]
-cxx-build = "1.0"
-bindgen = { version = "0.70", optional = true }
 
 [dev-dependencies]
 ndarray = "0.16"
 ndarray-rand = "0.15"
+
+[workspace]
+members = ["faiss-next-sys"]
