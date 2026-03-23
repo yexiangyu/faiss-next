@@ -51,6 +51,13 @@ Rust bindings for [Faiss](https://github.com/facebookresearch/faiss) (Facebook A
 | `IndexBinary` | Binary vector indexes |
 | `IndexFlat1D` | Optimized 1D flat index |
 
+## Search Parameters
+
+| Type | Description |
+|------|-------------|
+| `SearchParameters` | Basic search parameters |
+| `SearchParametersIvf` | IVF-specific parameters (`nprobe`, `max_codes`) |
+
 ## Getting Started
 
 ### Prerequisites
@@ -214,6 +221,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     clustering.train(n, &data, &mut index)?;
 
     let centroids = clustering.centroids();
+    Ok(())
+}
+```
+
+### Search with Parameters
+
+For fine-grained control over search behavior, use `search_with_params`:
+
+```rust,no_run
+use faiss_next::{index_factory, MetricType, Index, SearchParameters, SearchParametersIvf};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut index = index_factory(128, "IVF256,Flat", MetricType::L2)?;
+    
+    let training_data: Vec<f32> = vec![0.0; 128 * 1000];
+    index.train(&training_data)?;
+    index.add(&training_data)?;
+
+    let query: Vec<f32> = vec![0.0; 128];
+    
+    // Basic search parameters
+    let params = SearchParameters::new()?;
+    let result = index.search_with_params(&query, 10, &params)?;
+
+    // IVF-specific parameters (nprobe, max_codes)
+    let mut ivf_params = SearchParametersIvf::new()?;
+    ivf_params.set_nprobe(16);       // Search 16 clusters
+    ivf_params.set_max_codes(10000); // Max codes to visit
+    let result = index.search_with_params(&query, 10, &ivf_params)?;
+    Ok(())
+}
+```
+
+### Range Search
+
+Find all vectors within a distance threshold:
+
+```rust,no_run
+use faiss_next::{IndexFlat, Index};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut index = IndexFlat::new_l2(128)?;
+    let vectors: Vec<f32> = vec![0.0; 128 * 100];
+    index.add(&vectors)?;
+
+    let query: Vec<f32> = vec![0.0; 128];
+    
+    // Find all vectors within radius 10.0
+    let result = index.range_search(&query, 10.0)?;
+
+    // Iterate over results
+    for (labels, distances) in result.iter() {
+        println!("Found {} results", labels.len());
+    }
+
+    // Get results for a specific query
+    if let Some((labels, distances)) = result.get(0) {
+        println!("Query 0: {} results within radius", labels.len());
+    }
     Ok(())
 }
 ```
