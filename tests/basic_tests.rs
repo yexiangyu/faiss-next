@@ -1,7 +1,8 @@
 use faiss_next::{
-    index_factory, read_index, write_index, Clustering, ClusteringParameters, Index, IndexBuilder,
-    IndexFlat, IndexIDMap, IndexIVF, IndexIVFFlat, IndexLSH, IvfIndex, MetricType,
-    SearchParameters, SearchParametersIvf, SearchParams,
+    index_factory, read_index, write_index, Clustering, ClusteringParameters, IDSelectorBatch,
+    IDSelectorRange, Index, IndexBuilder, IndexFlat, IndexIDMap, IndexIVF, IndexIVFFlat, IndexLSH,
+    IvfIndex, MetricType, PcaMatrix, SearchParameters, SearchParametersIvf, SearchParams,
+    VectorTransform,
 };
 use std::path::Path;
 
@@ -427,4 +428,84 @@ fn test_search_with_params_ivf() {
 
     let result = index.search_with_params(&query, 10, &params).unwrap();
     assert_eq!(result.labels.len(), 10);
+}
+
+#[test]
+fn test_assign() {
+    let d = 32u32;
+    let n = 100usize;
+
+    let mut index = IndexFlat::new_l2(d).unwrap();
+    let data = generate_unique_data(n, d as usize, 777);
+    index.add(&data).unwrap();
+
+    let query: Vec<f32> = data[0..d as usize].to_vec();
+    let labels = index.assign(&query, 5).unwrap();
+
+    assert_eq!(labels.len(), 5);
+    assert_eq!(labels[0].get(), Some(0));
+}
+
+#[test]
+fn test_reconstruct_n() {
+    let d = 16u32;
+    let n = 50usize;
+
+    let mut index = IndexFlat::new_l2(d).unwrap();
+    let data = generate_unique_data(n, d as usize, 888);
+    index.add(&data).unwrap();
+
+    let reconstructed = index.reconstruct_n(0.into(), 10).unwrap();
+    assert_eq!(reconstructed.len(), 10 * d as usize);
+}
+
+#[test]
+fn test_remove_ids() {
+    let d = 16u32;
+    let n = 100usize;
+
+    let mut index = IndexFlat::new_l2(d).unwrap();
+    let data = generate_unique_data(n, d as usize, 999);
+    index.add(&data).unwrap();
+    assert_eq!(index.ntotal(), n as u64);
+
+    let selector = IDSelectorRange::new(0, 10).unwrap();
+    let removed = index.remove_ids(&selector).unwrap();
+    assert_eq!(removed, 10);
+    assert_eq!(index.ntotal(), (n - 10) as u64);
+}
+
+#[test]
+fn test_remove_ids_batch() {
+    let d = 16u32;
+    let n = 100usize;
+
+    let mut index = IndexFlat::new_l2(d).unwrap();
+    let data = generate_unique_data(n, d as usize, 111);
+    index.add(&data).unwrap();
+    assert_eq!(index.ntotal(), n as u64);
+
+    let ids_to_remove: Vec<i64> = vec![0, 5, 10, 15, 20];
+    let selector = IDSelectorBatch::new(&ids_to_remove).unwrap();
+    let removed = index.remove_ids(&selector).unwrap();
+    assert_eq!(removed, 5);
+    assert_eq!(index.ntotal(), (n - 5) as u64);
+}
+
+#[test]
+fn test_pca_transform() {
+    let d_in = 32u32;
+    let d_out = 16u32;
+    let n = 100usize;
+
+    let mut pca = PcaMatrix::new(d_in, d_out, 0.0, false).unwrap();
+    assert_eq!(pca.d_in(), d_in);
+    assert_eq!(pca.d_out(), d_out);
+
+    let data = generate_unique_data(n, d_in as usize, 222);
+    pca.train(n, &data).unwrap();
+    assert!(pca.is_trained());
+
+    let transformed = pca.apply(n, &data).unwrap();
+    assert_eq!(transformed.len(), n * d_out as usize);
 }
