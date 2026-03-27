@@ -14,3 +14,9 @@ include!("linux_x86_64.rs");
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64", feature = "cuda"))]
 include!("linux_x86_64_cuda.rs");
+
+#[cfg(all(target_os = "windows", target_arch = "x86_64", not(feature = "cuda")))]
+include!("windows_x86_64.rs");
+
+#[cfg(all(target_os = "windows", target_arch = "x86_64", feature = "cuda"))]
+include!("windows_x86_64_cuda.rs");

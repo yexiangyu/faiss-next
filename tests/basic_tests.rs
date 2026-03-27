@@ -1,8 +1,7 @@
 use faiss_next::{
     index_factory, read_index, write_index, Clustering, ClusteringParameters, IDSelectorBatch,
     IDSelectorRange, Index, IndexBuilder, IndexFlat, IndexIDMap, IndexIVF, IndexIVFFlat, IndexLSH,
-    IvfIndex, MetricType, PcaMatrix, SearchParameters, SearchParametersIvf, SearchParams,
-    VectorTransform,
+    IvfIndex, MetricType, PcaMatrix, SearchParameters, SearchParametersIvf, VectorTransform,
 };
 use std::path::Path;
 
@@ -264,19 +263,21 @@ fn test_id_map() {
 fn test_io_write_read_index() {
     let d = 32u32;
     let n = 100usize;
-    let path = "/tmp/test_faiss_index.bin";
+    let temp_dir = std::env::temp_dir();
+    let path = temp_dir.join("test_faiss_index.bin");
+    let path_str = path.to_str().unwrap();
 
-    cleanup_test_file(path);
+    cleanup_test_file(path_str);
 
     let mut index = IndexFlat::new_l2(d).unwrap();
     let data = generate_unique_data(n, d as usize, 888);
 
     index.add(&data).unwrap();
 
-    write_index(&index, path).unwrap();
-    assert!(Path::new(path).exists());
+    write_index(&index, path_str).unwrap();
+    assert!(Path::new(path_str).exists());
 
-    let mut loaded_index = read_index(path).unwrap();
+    let mut loaded_index = read_index(path_str).unwrap();
     assert_eq!(loaded_index.ntotal(), n as u64);
     assert_eq!(loaded_index.d(), d);
 
@@ -285,7 +286,7 @@ fn test_io_write_read_index() {
 
     assert_eq!(result.labels[0].get(), Some(42));
 
-    cleanup_test_file(path);
+    cleanup_test_file(path_str);
 }
 
 #[test]

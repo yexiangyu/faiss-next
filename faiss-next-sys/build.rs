@@ -5,6 +5,13 @@ const FAISS_MIN_VERSION: (u32, u32, u32) = (1, 14, 0);
 const FAISS_MAX_TESTED_VERSION: (u32, u32, u32) = (1, 14, 99);
 const BINDING_VERSION: &str = "v1_14";
 
+#[allow(dead_code)]
+struct FaissPaths {
+    include_dir: PathBuf,
+    lib_dir: PathBuf,
+    version: Option<(u32, u32, u32)>,
+}
+
 fn main() {
     println!("cargo:rustc-check-cfg=cfg(faiss_binding, values(\"v1_14\", \"v1_15\"))");
     println!(
@@ -15,18 +22,13 @@ fn main() {
         return;
     }
 
-    let faiss_path = find_faiss();
+    if let Some(paths) = find_faiss() {
+        println!("cargo:rustc-link-search=native={}", paths.lib_dir.display());
 
-    if let Some(ref path) = faiss_path {
-        println!(
-            "cargo:rustc-link-search=native={}",
-            path.join("lib").display()
-        );
-
-        if let Some(version) = detect_version(path) {
-            check_version(&version);
-            emit_version_cfg(&version);
-            select_binding_version(&version);
+        if let Some(version) = &paths.version {
+            check_version(version);
+            emit_version_cfg(version);
+            select_binding_version(version);
         } else {
             println!(
                 "cargo:warning=Could not detect Faiss version, using {} bindings",
@@ -34,6 +36,9 @@ fn main() {
             );
             println!("cargo:rustc-cfg=faiss_binding=\"{}\"", BINDING_VERSION);
         }
+
+        #[cfg(feature = "bindgen")]
+        generate_bindings(&paths);
     } else {
         println!(
             "cargo:warning=Faiss not found via standard paths, using {} bindings",
@@ -47,17 +52,34 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=faiss");
     println!("cargo:rustc-link-lib=dylib=faiss_c");
 
-    #[cfg(feature = "bindgen")]
-    generate_bindings(&faiss_path);
-
     println!("cargo:rerun-if-changed=wrapper.h");
 }
 
-fn find_faiss() -> Option<PathBuf> {
+fn find_faiss() -> Option<FaissPaths> {
+    if let Ok(include_dir) = env::var("FAISS_INCLUDE_DIR") {
+        if let Ok(lib_dir) = env::var("FAISS_LIB_DIR") {
+            let include_path = PathBuf::from(include_dir);
+            let lib_path = PathBuf::from(lib_dir);
+            if include_path.is_dir() && lib_path.is_dir() {
+                let version = detect_version_from_include(&include_path);
+                return Some(FaissPaths {
+                    include_dir: include_path,
+                    lib_dir: lib_path,
+                    version,
+                });
+            }
+        }
+    }
+
     if let Ok(dir) = env::var("FAISS_DIR") {
         let path = PathBuf::from(dir);
         if path.join("include").is_dir() && path.join("lib").is_dir() {
-            return Some(path);
+            let version = detect_version(&path);
+            return Some(FaissPaths {
+                include_dir: path.join("include"),
+                lib_dir: path.join("lib"),
+                version,
+            });
         }
     }
 
@@ -65,15 +87,12 @@ fn find_faiss() -> Option<PathBuf> {
     {
         let path = PathBuf::from("/opt/homebrew/opt/faiss");
         if path.join("include").is_dir() && path.join("lib").is_dir() {
-            return Some(path);
-        }
-    }
-
-    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-    {
-        let path = PathBuf::from("/usr/local/opt/faiss");
-        if path.join("include").is_dir() && path.join("lib").is_dir() {
-            return Some(path);
+            let version = detect_version(&path);
+            return Some(FaissPaths {
+                include_dir: path.join("include"),
+                lib_dir: path.join("lib"),
+                version,
+            });
         }
     }
 
@@ -81,7 +100,12 @@ fn find_faiss() -> Option<PathBuf> {
     {
         let path = PathBuf::from("/usr/local");
         if path.join("include/faiss").is_dir() {
-            return Some(path);
+            let version = detect_version(&path);
+            return Some(FaissPaths {
+                include_dir: path.join("include"),
+                lib_dir: path.join("lib"),
+                version,
+            });
         }
 
         if pkg_config::probe_library("faiss").is_ok() {
@@ -89,11 +113,62 @@ fn find_faiss() -> Option<PathBuf> {
         }
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        let path = PathBuf::from("C:\\tools\\faiss");
+        if path.join("include").is_dir() && path.join("lib").is_dir() {
+            let version = detect_version(&path);
+            return Some(FaissPaths {
+                include_dir: path.join("include"),
+                lib_dir: path.join("lib"),
+                version,
+            });
+        }
+
+        let candidates = [
+            "C:\\faiss",
+            "C:\\Program Files\\faiss",
+            "C:\\Program Files (x86)\\faiss",
+        ];
+        for candidate in candidates {
+            let path = PathBuf::from(candidate);
+            if path.join("include").is_dir() && path.join("lib").is_dir() {
+                let version = detect_version(&path);
+                return Some(FaissPaths {
+                    include_dir: path.join("include"),
+                    lib_dir: path.join("lib"),
+                    version,
+                });
+            }
+        }
+
+        if let Ok(path) = env::var("PATH") {
+            for entry in path.split(';') {
+                let path = PathBuf::from(entry);
+                if path.join("faiss.dll").exists() || path.join("faiss_c.dll").exists() {
+                    let parent = path.parent()?;
+                    if parent.join("include").is_dir() {
+                        let version = detect_version(parent);
+                        return Some(FaissPaths {
+                            include_dir: parent.join("include"),
+                            lib_dir: path,
+                            version,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     None
 }
 
 fn detect_version(faiss_path: &std::path::Path) -> Option<(u32, u32, u32)> {
-    let index_h = faiss_path.join("include/faiss/Index.h");
+    detect_version_from_include(&faiss_path.join("include"))
+}
+
+fn detect_version_from_include(include_path: &std::path::Path) -> Option<(u32, u32, u32)> {
+    let index_h = include_path.join("faiss/Index.h");
     if let Ok(content) = std::fs::read_to_string(&index_h) {
         let mut major: Option<u32> = None;
         let mut minor: Option<u32> = None;
@@ -119,7 +194,7 @@ fn detect_version(faiss_path: &std::path::Path) -> Option<(u32, u32, u32)> {
         }
     }
 
-    let version_file = faiss_path.join("include/faiss/impl/platform_macros.h");
+    let version_file = include_path.join("faiss/impl/platform_macros.h");
     if let Ok(content) = std::fs::read_to_string(&version_file) {
         if let Some(line) = content.lines().find(|l| l.contains("FAISS_VERSION")) {
             let parts: Vec<&str> = line.split('"').collect();
@@ -191,9 +266,20 @@ fn select_binding_version(version: &(u32, u32, u32)) {
 }
 
 fn search_library_paths() {
-    for env_var in ["LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"] {
+    let env_vars = if cfg!(target_os = "windows") {
+        vec!["PATH"]
+    } else {
+        vec!["LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"]
+    };
+
+    for env_var in env_vars {
         if let Ok(paths) = env::var(env_var) {
-            for path in paths.split(':') {
+            let separator = if cfg!(target_os = "windows") {
+                ';'
+            } else {
+                ':'
+            };
+            for path in paths.split(separator) {
                 let path = PathBuf::from(path);
                 let has_faiss = path.join("libfaiss.so").exists()
                     || path.join("libfaiss.dylib").exists()
@@ -210,7 +296,7 @@ fn search_library_paths() {
     }
 }
 
-#[cfg(feature = "cuda")]
+#[cfg(all(feature = "cuda", feature = "bindgen"))]
 fn cuda_dir() -> Option<PathBuf> {
     #[cfg(target_os = "linux")]
     {
@@ -219,11 +305,36 @@ fn cuda_dir() -> Option<PathBuf> {
             return Some(path);
         }
     }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(cuda_path) = env::var("CUDA_PATH") {
+            let path = PathBuf::from(cuda_path);
+            if path.join("include").exists() {
+                return Some(path);
+            }
+        }
+
+        let base = PathBuf::from("C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA");
+        if base.exists() {
+            if let Ok(entries) = std::fs::read_dir(&base) {
+                let mut versions: Vec<_> = entries
+                    .filter_map(|e| e.ok())
+                    .filter(|e| e.path().join("include").exists())
+                    .collect();
+                versions.sort_by_key(|e| e.file_name());
+                if let Some(latest) = versions.last() {
+                    return Some(latest.path());
+                }
+            }
+        }
+    }
+
     None
 }
 
 #[cfg(feature = "bindgen")]
-fn generate_bindings(faiss_path: &Option<PathBuf>) {
+fn generate_bindings(paths: &FaissPaths) {
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
 
@@ -237,11 +348,16 @@ fn generate_bindings(faiss_path: &Option<PathBuf>) {
     let output_file = if cfg!(feature = "cuda") {
         #[cfg(target_os = "macos")]
         panic!("CUDA is not supported on macOS");
-        out_dir.join(format!("{}_cuda.rs", os))
+        match os.as_str() {
+            "linux" => out_dir.join(format!("linux_{}_cuda.rs", arch)),
+            "windows" => out_dir.join(format!("windows_{}_cuda.rs", arch)),
+            _ => out_dir.join(format!("{}_cuda.rs", os)),
+        }
     } else {
         match os.as_str() {
             "macos" => out_dir.join(format!("macos_{}.rs", arch)),
             "linux" => out_dir.join(format!("linux_{}.rs", arch)),
+            "windows" => out_dir.join(format!("windows_{}.rs", arch)),
             _ => out_dir.join(format!("{}_{}.rs", os, arch)),
         }
     };
@@ -257,11 +373,9 @@ fn generate_bindings(faiss_path: &Option<PathBuf>) {
         .allowlist_type("idx_t|Faiss.*")
         .opaque_type("FILE");
 
-    if let Some(path) = faiss_path {
-        builder = builder.clang_arg(format!("-I{}", path.join("include").display()));
-    }
+    builder = builder.clang_arg(format!("-I{}", paths.include_dir.display()));
 
-    #[cfg(feature = "cuda")]
+    #[cfg(all(feature = "cuda", feature = "bindgen"))]
     {
         if let Some(cuda_path) = cuda_dir() {
             builder = builder

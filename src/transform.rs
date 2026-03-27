@@ -33,12 +33,12 @@ pub trait VectorTransform {
         let d_out = self.d_out() as usize;
         let mut xt = vec![0.0f32; n * d_out];
         unsafe {
-            let result =
-                faiss_next_sys::faiss_VectorTransform_apply(self.inner_ptr(), n as i64, x.as_ptr());
-            if result.is_null() {
-                return Err(crate::error::Error::NullPointer);
-            }
-            xt.copy_from_slice(std::slice::from_raw_parts(result, n * d_out));
+            faiss_next_sys::faiss_VectorTransform_apply_noalloc(
+                self.inner_ptr(),
+                n as i64,
+                x.as_ptr(),
+                xt.as_mut_ptr(),
+            )
         }
         Ok(xt)
     }

@@ -11,7 +11,7 @@ Rust bindings for [Faiss](https://github.com/facebookresearch/faiss) (Facebook A
 - **Safe Rust API**: Idiomatic Rust wrappers around Faiss C API
 - **Multiple Index Types**: Support for Flat, IVF, LSH, Scalar Quantizer, and more
 - **Multi-Version Support**: Works with Faiss 1.14.x and newer (with loose compatibility mode)
-- **CUDA Support**: Optional GPU acceleration on Linux (feature flag: `cuda`)
+- **CUDA Support**: Optional GPU acceleration on Linux and Windows (feature flag: `cuda`)
 - **Serialization**: Save and load indexes to/from disk
 - **Clustering**: K-means clustering with customizable parameters
 - **Pairwise Operations**: Efficient distance computations (L2, inner product)
@@ -21,19 +21,15 @@ Rust bindings for [Faiss](https://github.com/facebookresearch/faiss) (Facebook A
 | OS | Architecture | CPU | CUDA |
 |----|--------------|-----|------|
 | macOS (Apple Silicon) | aarch64 (M1/M2/M3) | ✅ | ❌ |
-| macOS (Intel) | x86_64 | ⚠️ | ❌ |
 | Linux | x86_64 | ✅ | ✅ |
-| Linux | aarch64 | ⚠️ | ❌ |
-| Windows | x86_64 | ⚠️ | ⚠️ |
+| Windows | x86_64 | ✅ | ✅ |
 
 **Legend:**
 - ✅ Fully supported with pre-generated bindings
-- ⚠️ May work with `bindgen` feature to generate bindings at compile time
 - ❌ Not supported
 
 **Notes:**
-- CUDA is only supported on Linux x86_64
-- For unsupported platforms, enable `bindgen` feature: `faiss-next = { version = "0.6", features = ["bindgen"] }`
+- CUDA is supported on Linux x86_64 and Windows x86_64
 
 ## Supported Index Types
 
@@ -79,6 +75,34 @@ cmake -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON ..
 make -j
 sudo make install
 ```
+
+**Windows:**
+
+For Windows, you need to build Faiss from source with C API enabled. A pre-configured build is available at:
+
+```bash
+git clone -b windows-build https://github.com/yexiangyu/faiss.git
+cd faiss
+mkdir build && cd build
+cmake -A x64 -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON ^
+      -DFAISS_ENABLE_GPU=ON ^
+      -DCMAKE_INSTALL_PREFIX=C:/tools/faiss ..
+cmake --build . --config Release
+cmake --install . --config Release
+```
+
+After installation, set environment variables:
+```cmd
+set FAISS_INCLUDE_DIR=C:\tools\faiss\include
+set FAISS_LIB_DIR=C:\tools\faiss\lib
+```
+
+Or copy `faiss.dll` and `faiss_c.dll` to your executable directory.
+
+**Note:** CUDA support on Windows requires:
+- NVIDIA CUDA Toolkit installed
+- Faiss built with `-DFAISS_ENABLE_GPU=ON`
+- MKL libraries (bundled with Intel oneAPI or conda)
 
 2. Ensure the library is discoverable:
    - Set `FAISS_DIR` environment variable, or
@@ -288,8 +312,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Flag | Description |
 |------|-------------|
-| `cuda` | Enable CUDA GPU support (Linux only) |
-| `bindgen` | Generate bindings at compile time |
+| `cuda` | Enable CUDA GPU support (Linux x86_64 and Windows x86_64) |
+| `bindgen` | Generate bindings at compile time (requires LLVM/Clang) |
 
 ## Performance
 

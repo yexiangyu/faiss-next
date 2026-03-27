@@ -13,26 +13,22 @@ This crate provides unsafe Rust bindings to the Faiss C library. For a safe, idi
 - Automatic Faiss version detection
 - Multi-version binding support (1.14.x, 1.15.x, ...)
 - Optional runtime binding generation via `bindgen`
-- CUDA support (Linux only)
+- CUDA support (Linux and Windows)
 
 ## Supported Platforms
 
 | OS | Architecture | CPU | CUDA |
 |----|--------------|-----|------|
 | macOS (Apple Silicon) | aarch64 (M1/M2/M3) | ✅ | ❌ |
-| macOS (Intel) | x86_64 | ⚠️ | ❌ |
 | Linux | x86_64 | ✅ | ✅ |
-| Linux | aarch64 | ⚠️ | ❌ |
-| Windows | x86_64 | ⚠️ | ⚠️ |
+| Windows | x86_64 | ✅ | ✅ |
 
 **Legend:**
 - ✅ Fully supported with pre-generated bindings
-- ⚠️ May work with `bindgen` feature to generate bindings at compile time
 - ❌ Not supported
 
 **Notes:**
-- CUDA is only supported on Linux x86_64
-- For unsupported platforms, enable `bindgen` feature
+- CUDA is supported on Linux x86_64 and Windows x86_64
 
 ## Getting Started
 
@@ -56,6 +52,34 @@ sudo make install
 sudo ldconfig
 ```
 
+**Windows:**
+
+Build Faiss from source with C API enabled. A pre-configured build is available at:
+```bash
+git clone -b windows-build https://github.com/yexiangyu/faiss.git
+cd faiss
+mkdir build && cd build
+cmake -A x64 -DFAISS_ENABLE_C_API=ON -DBUILD_SHARED_LIBS=ON ^
+      -DFAISS_ENABLE_GPU=ON ^
+      -DCMAKE_INSTALL_PREFIX=C:/tools/faiss ..
+cmake --build . --config Release
+cmake --install . --config Release
+```
+
+After installation, set environment variables:
+```cmd
+set FAISS_INCLUDE_DIR=C:\tools\faiss\include
+set FAISS_LIB_DIR=C:\tools\faiss\lib
+```
+
+Alternatively, place Faiss in the default location:
+- `C:\tools\faiss` (include: `C:\tools\faiss\include`, lib: `C:\tools\faiss\lib`)
+
+Or other supported locations:
+- `C:\faiss`
+- `C:\Program Files\faiss`
+- `C:\Program Files (x86)\faiss`
+
 ### Installation
 
 This crate is typically used as a dependency of `faiss-next`. Add to `Cargo.toml`:
@@ -69,16 +93,29 @@ faiss-next-sys = "0.6"
 
 | Variable | Description |
 |----------|-------------|
-| `FAISS_DIR` | Path to Faiss installation (must contain `include/` and `lib/`) |
+| `FAISS_INCLUDE_DIR` | Direct path to Faiss include directory (e.g., `C:\faiss\include`) |
+| `FAISS_LIB_DIR` | Direct path to Faiss lib directory (e.g., `C:\faiss\lib`) |
+| `FAISS_DIR` | Path to Faiss installation root (must contain `include/` and `lib/`) |
 | `LD_LIBRARY_PATH` | Linux library search path |
 | `DYLD_LIBRARY_PATH` | macOS library search path |
+| `PATH` | Windows DLL search path |
+
+**Priority order:**
+1. `FAISS_INCLUDE_DIR` + `FAISS_LIB_DIR` (direct paths, recommended for Windows)
+2. `FAISS_DIR` (installation root)
+3. Platform-specific default paths
 
 ## Feature Flags
 
 | Flag | Description |
 |------|-------------|
-| `cuda` | Enable CUDA support (Linux only) |
+| `cuda` | Enable CUDA support (Linux x86_64 and Windows x86_64) |
 | `bindgen` | Generate bindings at compile time |
+
+**Note:** The `bindgen` feature requires LLVM/Clang to be installed:
+- **Linux:** `sudo apt install llvm-dev libclang-dev` (Ubuntu/Debian)
+- **macOS:** `brew install llvm`
+- **Windows:** Install LLVM from https://llvm.org/builds/ and ensure `libclang` is in your PATH
 
 ## Version Detection
 
@@ -114,21 +151,18 @@ src/bindings/
     ├── macos_aarch64.rs
     ├── macos_aarch64_cuda.rs
     ├── linux_x86_64.rs
-    └── linux_x86_64_cuda.rs
+    ├── linux_x86_64_cuda.rs
+    ├── windows_x86_64.rs
+    └── windows_x86_64_cuda.rs
 ```
 
 ### Generate New Bindings
 
-To generate bindings for your platform:
+To generate bindings for your platform (e.g., when using a custom Faiss version):
 
 ```bash
 cargo build --features bindgen
 ```
-
-This is useful when:
-- Using an unsupported platform
-- Using a custom Faiss build
-- Adding support for a new Faiss version
 
 ## API Structure
 

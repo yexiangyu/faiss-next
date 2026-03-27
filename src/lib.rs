@@ -15,7 +15,7 @@ pub mod result;
 pub mod search_params;
 pub mod transform;
 
-#[cfg(all(target_os = "linux", feature = "cuda"))]
+#[cfg(feature = "cuda")]
 pub mod gpu;
 
 pub use clustering::{Clustering, ClusteringParameters};
@@ -49,5 +49,5 @@ pub use transform::{
     OpqMatrix, PcaMatrix, RandomRotationMatrix, RemapDimensionsTransform, VectorTransform,
 };
 
-#[cfg(all(target_os = "linux", feature = "cuda"))]
+#[cfg(feature = "cuda")]
 pub use gpu::{GpuIndexImpl, GpuResources};

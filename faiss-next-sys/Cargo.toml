@@ -15,4 +15,7 @@ bindgen = ["dep:bindgen"]
 bindgen = { version = "0.70", optional = true }
 pkg-config = { version = "0.3", optional = true }
 
+[target.'cfg(not(target_os = "windows"))'.build-dependencies]
+pkg-config = { version = "0.3", optional = true }
+
 [dev-dependencies]
