@@ -9,7 +9,7 @@ links = "faiss"
 [features]
 default = []
 cuda = []
-bindgen = ["dep:bindgen"]
+bindgen = ["dep:bindgen", "dep:pkg-config"]
 
 [build-dependencies]
 bindgen = { version = "0.70", optional = true }

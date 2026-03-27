@@ -108,6 +108,7 @@ fn find_faiss() -> Option<FaissPaths> {
             });
         }
 
+        #[cfg(feature = "bindgen")]
         if pkg_config::probe_library("faiss").is_ok() {
             return None;
         }

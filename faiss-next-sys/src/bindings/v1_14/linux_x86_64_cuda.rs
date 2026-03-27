@@ -2,6 +2,18 @@
 
 pub type faiss_idx_t = i64;
 pub type idx_t = faiss_idx_t;
+#[repr(i32)]
+#[non_exhaustive]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum FaissErrorCode {
+    OK = 0,
+    UNKNOWN_EXCEPT = -1,
+    FAISS_EXCEPT = -2,
+    STD_EXCEPT = -4,
+}
+extern "C" {
+    pub fn faiss_get_last_error() -> *const ::std::os::raw::c_char;
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct FaissRangeSearchResult_H {
@@ -194,6 +206,264 @@ extern "C" {
         x: *mut f32,
     ) -> ::std::os::raw::c_int;
 }
+pub type FaissIndexFlat = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexFlat_new(p_index: *mut *mut FaissIndexFlat) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexFlat_new_with(
+        p_index: *mut *mut FaissIndexFlat,
+        d: idx_t,
+        metric: FaissMetricType,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexFlat_xb(index: *mut FaissIndexFlat, p_xb: *mut *mut f32, p_size: *mut usize);
+}
+extern "C" {
+    pub fn faiss_IndexFlat_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlat;
+}
+extern "C" {
+    pub fn faiss_IndexFlat_free(obj: *mut FaissIndexFlat);
+}
+extern "C" {
+    pub fn faiss_IndexFlat_compute_distance_subset(
+        index: *mut FaissIndex,
+        n: idx_t,
+        x: *const f32,
+        k: idx_t,
+        distances: *mut f32,
+        labels: *const idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissIndexFlatIP = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexFlatIP_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlatIP;
+}
+extern "C" {
+    pub fn faiss_IndexFlatIP_free(obj: *mut FaissIndexFlatIP);
+}
+extern "C" {
+    pub fn faiss_IndexFlatIP_new(p_index: *mut *mut FaissIndexFlatIP) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexFlatIP_new_with(
+        p_index: *mut *mut FaissIndexFlatIP,
+        d: idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissIndexFlatL2 = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexFlatL2_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlatL2;
+}
+extern "C" {
+    pub fn faiss_IndexFlatL2_free(obj: *mut FaissIndexFlatL2);
+}
+extern "C" {
+    pub fn faiss_IndexFlatL2_new(p_index: *mut *mut FaissIndexFlatL2) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexFlatL2_new_with(
+        p_index: *mut *mut FaissIndexFlatL2,
+        d: idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissIndexRefineFlat = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexRefineFlat_new(
+        p_index: *mut *mut FaissIndexRefineFlat,
+        base_index: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexRefineFlat_free(obj: *mut FaissIndexRefineFlat);
+}
+extern "C" {
+    pub fn faiss_IndexRefineFlat_cast(arg1: *mut FaissIndex) -> *mut FaissIndexRefineFlat;
+}
+extern "C" {
+    pub fn faiss_IndexRefineFlat_own_fields(
+        arg1: *const FaissIndexRefineFlat,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexRefineFlat_set_own_fields(
+        arg1: *mut FaissIndexRefineFlat,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexRefineFlat_k_factor(arg1: *const FaissIndexRefineFlat) -> f32;
+}
+extern "C" {
+    pub fn faiss_IndexRefineFlat_set_k_factor(arg1: *mut FaissIndexRefineFlat, arg2: f32);
+}
+pub type FaissIndexFlat1D = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexFlat1D_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlat1D;
+}
+extern "C" {
+    pub fn faiss_IndexFlat1D_free(obj: *mut FaissIndexFlat1D);
+}
+extern "C" {
+    pub fn faiss_IndexFlat1D_new(p_index: *mut *mut FaissIndexFlat1D) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexFlat1D_new_with(
+        p_index: *mut *mut FaissIndexFlat1D,
+        continuous_update: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexFlat1D_update_permutation(
+        index: *mut FaissIndexFlat1D,
+    ) -> ::std::os::raw::c_int;
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct FaissClusteringParameters {
+    pub niter: ::std::os::raw::c_int,
+    pub nredo: ::std::os::raw::c_int,
+    pub verbose: ::std::os::raw::c_int,
+    pub spherical: ::std::os::raw::c_int,
+    pub int_centroids: ::std::os::raw::c_int,
+    pub update_index: ::std::os::raw::c_int,
+    pub frozen_centroids: ::std::os::raw::c_int,
+    pub min_points_per_centroid: ::std::os::raw::c_int,
+    pub max_points_per_centroid: ::std::os::raw::c_int,
+    pub seed: ::std::os::raw::c_int,
+    pub decode_block_size: usize,
+}
+extern "C" {
+    pub fn faiss_ClusteringParameters_init(params: *mut FaissClusteringParameters);
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissClustering_H {
+    _unused: [u8; 0],
+}
+pub type FaissClustering = FaissClustering_H;
+extern "C" {
+    pub fn faiss_Clustering_niter(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_nredo(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_verbose(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_spherical(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_int_centroids(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_update_index(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_frozen_centroids(arg1: *const FaissClustering)
+        -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_min_points_per_centroid(
+        arg1: *const FaissClustering,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_max_points_per_centroid(
+        arg1: *const FaissClustering,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_seed(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_decode_block_size(arg1: *const FaissClustering) -> usize;
+}
+extern "C" {
+    pub fn faiss_Clustering_d(arg1: *const FaissClustering) -> usize;
+}
+extern "C" {
+    pub fn faiss_Clustering_k(arg1: *const FaissClustering) -> usize;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissClusteringIterationStats_H {
+    _unused: [u8; 0],
+}
+pub type FaissClusteringIterationStats = FaissClusteringIterationStats_H;
+extern "C" {
+    pub fn faiss_ClusteringIterationStats_obj(arg1: *const FaissClusteringIterationStats) -> f32;
+}
+extern "C" {
+    pub fn faiss_ClusteringIterationStats_time(arg1: *const FaissClusteringIterationStats) -> f64;
+}
+extern "C" {
+    pub fn faiss_ClusteringIterationStats_time_search(
+        arg1: *const FaissClusteringIterationStats,
+    ) -> f64;
+}
+extern "C" {
+    pub fn faiss_ClusteringIterationStats_imbalance_factor(
+        arg1: *const FaissClusteringIterationStats,
+    ) -> f64;
+}
+extern "C" {
+    pub fn faiss_ClusteringIterationStats_nsplit(
+        arg1: *const FaissClusteringIterationStats,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_centroids(
+        clustering: *mut FaissClustering,
+        centroids: *mut *mut f32,
+        size: *mut usize,
+    );
+}
+extern "C" {
+    pub fn faiss_Clustering_iteration_stats(
+        clustering: *mut FaissClustering,
+        iteration_stats: *mut *mut FaissClusteringIterationStats,
+        size: *mut usize,
+    );
+}
+extern "C" {
+    pub fn faiss_Clustering_new(
+        p_clustering: *mut *mut FaissClustering,
+        d: ::std::os::raw::c_int,
+        k: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_new_with_params(
+        p_clustering: *mut *mut FaissClustering,
+        d: ::std::os::raw::c_int,
+        k: ::std::os::raw::c_int,
+        cp: *const FaissClusteringParameters,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_train(
+        clustering: *mut FaissClustering,
+        n: idx_t,
+        x: *const f32,
+        index: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_Clustering_free(clustering: *mut FaissClustering);
+}
+extern "C" {
+    pub fn faiss_kmeans_clustering(
+        d: usize,
+        n: usize,
+        k: usize,
+        x: *const f32,
+        centroids: *mut f32,
+        q_error: *mut f32,
+    ) -> ::std::os::raw::c_int;
+}
 extern "C" {
     pub fn faiss_RangeSearchResult_nq(arg1: *const FaissRangeSearchResult) -> usize;
 }
@@ -279,6 +549,28 @@ extern "C" {
         p_sel: *mut *mut FaissIDSelectorBatch,
         n: usize,
         indices: *const idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissIDSelectorBitmap_H {
+    _unused: [u8; 0],
+}
+pub type FaissIDSelectorBitmap = FaissIDSelectorBitmap_H;
+extern "C" {
+    pub fn faiss_IDSelectorBitmap_free(obj: *mut FaissIDSelectorBitmap);
+}
+extern "C" {
+    pub fn faiss_IDSelectorBitmap_n(arg1: *const FaissIDSelectorBitmap) -> usize;
+}
+extern "C" {
+    pub fn faiss_IDSelectorBitmap_bitmap(arg1: *const FaissIDSelectorBitmap) -> *const u8;
+}
+extern "C" {
+    pub fn faiss_IDSelectorBitmap_new(
+        p_sel: *mut *mut FaissIDSelectorBitmap,
+        n: usize,
+        bitmap: *const u8,
     ) -> ::std::os::raw::c_int;
 }
 #[repr(C)]
@@ -475,1144 +767,6 @@ extern "C" {
 extern "C" {
     pub fn faiss_DistanceComputer_free(obj: *mut FaissDistanceComputer);
 }
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct FaissVectorTransform_H {
-    _unused: [u8; 0],
-}
-pub type FaissVectorTransform = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_VectorTransform_free(obj: *mut FaissVectorTransform);
-}
-extern "C" {
-    pub fn faiss_VectorTransform_is_trained(
-        arg1: *const FaissVectorTransform,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_VectorTransform_d_in(arg1: *const FaissVectorTransform) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_VectorTransform_d_out(arg1: *const FaissVectorTransform) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_VectorTransform_train(
-        vt: *mut FaissVectorTransform,
-        n: idx_t,
-        x: *const f32,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_VectorTransform_apply(
-        vt: *const FaissVectorTransform,
-        n: idx_t,
-        x: *const f32,
-    ) -> *mut f32;
-}
-extern "C" {
-    pub fn faiss_VectorTransform_apply_noalloc(
-        vt: *const FaissVectorTransform,
-        n: idx_t,
-        x: *const f32,
-        xt: *mut f32,
-    );
-}
-extern "C" {
-    pub fn faiss_VectorTransform_reverse_transform(
-        vt: *const FaissVectorTransform,
-        n: idx_t,
-        xt: *const f32,
-        x: *mut f32,
-    );
-}
-pub type FaissLinearTransform = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_LinearTransform_free(obj: *mut FaissLinearTransform);
-}
-extern "C" {
-    pub fn faiss_LinearTransform_transform_transpose(
-        vt: *const FaissLinearTransform,
-        n: idx_t,
-        y: *const f32,
-        x: *mut f32,
-    );
-}
-extern "C" {
-    pub fn faiss_LinearTransform_set_is_orthonormal(vt: *mut FaissLinearTransform);
-}
-extern "C" {
-    pub fn faiss_LinearTransform_have_bias(
-        arg1: *const FaissLinearTransform,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_LinearTransform_is_orthonormal(
-        arg1: *const FaissLinearTransform,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissRandomRotationMatrix = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_RandomRotationMatrix_free(obj: *mut FaissRandomRotationMatrix);
-}
-extern "C" {
-    pub fn faiss_RandomRotationMatrix_new_with(
-        p_vt: *mut *mut FaissRandomRotationMatrix,
-        d_in: ::std::os::raw::c_int,
-        d_out: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissPCAMatrix = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_PCAMatrix_free(obj: *mut FaissPCAMatrix);
-}
-extern "C" {
-    pub fn faiss_PCAMatrix_new_with(
-        p_vt: *mut *mut FaissPCAMatrix,
-        d_in: ::std::os::raw::c_int,
-        d_out: ::std::os::raw::c_int,
-        eigen_power: f32,
-        random_rotation: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_PCAMatrix_eigen_power(arg1: *const FaissPCAMatrix) -> f32;
-}
-extern "C" {
-    pub fn faiss_PCAMatrix_random_rotation(arg1: *const FaissPCAMatrix) -> ::std::os::raw::c_int;
-}
-pub type FaissITQMatrix = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_ITQMatrix_free(obj: *mut FaissITQMatrix);
-}
-extern "C" {
-    pub fn faiss_ITQMatrix_new_with(
-        p_vt: *mut *mut FaissITQMatrix,
-        d: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissITQTransform = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_ITQTransform_free(obj: *mut FaissITQTransform);
-}
-extern "C" {
-    pub fn faiss_ITQTransform_new_with(
-        p_vt: *mut *mut FaissITQTransform,
-        d_in: ::std::os::raw::c_int,
-        d_out: ::std::os::raw::c_int,
-        do_pca: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_ITQTransform_do_pca(arg1: *const FaissITQTransform) -> ::std::os::raw::c_int;
-}
-pub type FaissOPQMatrix = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_OPQMatrix_free(obj: *mut FaissOPQMatrix);
-}
-extern "C" {
-    pub fn faiss_OPQMatrix_new_with(
-        p_vt: *mut *mut FaissOPQMatrix,
-        d: ::std::os::raw::c_int,
-        M: ::std::os::raw::c_int,
-        d2: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_OPQMatrix_verbose(arg1: *const FaissOPQMatrix) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_OPQMatrix_set_verbose(arg1: *mut FaissOPQMatrix, arg2: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_OPQMatrix_niter(arg1: *const FaissOPQMatrix) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_OPQMatrix_set_niter(arg1: *mut FaissOPQMatrix, arg2: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_OPQMatrix_niter_pq(arg1: *const FaissOPQMatrix) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_OPQMatrix_set_niter_pq(arg1: *mut FaissOPQMatrix, arg2: ::std::os::raw::c_int);
-}
-pub type FaissRemapDimensionsTransform = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_RemapDimensionsTransform_free(obj: *mut FaissRemapDimensionsTransform);
-}
-extern "C" {
-    pub fn faiss_RemapDimensionsTransform_new_with(
-        p_vt: *mut *mut FaissRemapDimensionsTransform,
-        d_in: ::std::os::raw::c_int,
-        d_out: ::std::os::raw::c_int,
-        uniform: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissNormalizationTransform = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_NormalizationTransform_free(obj: *mut FaissNormalizationTransform);
-}
-extern "C" {
-    pub fn faiss_NormalizationTransform_new_with(
-        p_vt: *mut *mut FaissNormalizationTransform,
-        d: ::std::os::raw::c_int,
-        norm: f32,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_NormalizationTransform_norm(arg1: *const FaissNormalizationTransform) -> f32;
-}
-pub type FaissCenteringTransform = FaissVectorTransform_H;
-extern "C" {
-    pub fn faiss_CenteringTransform_free(obj: *mut FaissCenteringTransform);
-}
-extern "C" {
-    pub fn faiss_CenteringTransform_new_with(
-        p_vt: *mut *mut FaissCenteringTransform,
-        d: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct FaissClusteringParameters {
-    pub niter: ::std::os::raw::c_int,
-    pub nredo: ::std::os::raw::c_int,
-    pub verbose: ::std::os::raw::c_int,
-    pub spherical: ::std::os::raw::c_int,
-    pub int_centroids: ::std::os::raw::c_int,
-    pub update_index: ::std::os::raw::c_int,
-    pub frozen_centroids: ::std::os::raw::c_int,
-    pub min_points_per_centroid: ::std::os::raw::c_int,
-    pub max_points_per_centroid: ::std::os::raw::c_int,
-    pub seed: ::std::os::raw::c_int,
-    pub decode_block_size: usize,
-}
-extern "C" {
-    pub fn faiss_ClusteringParameters_init(params: *mut FaissClusteringParameters);
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct FaissClustering_H {
-    _unused: [u8; 0],
-}
-pub type FaissClustering = FaissClustering_H;
-extern "C" {
-    pub fn faiss_Clustering_niter(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_nredo(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_verbose(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_spherical(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_int_centroids(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_update_index(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_frozen_centroids(arg1: *const FaissClustering)
-        -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_min_points_per_centroid(
-        arg1: *const FaissClustering,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_max_points_per_centroid(
-        arg1: *const FaissClustering,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_seed(arg1: *const FaissClustering) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_decode_block_size(arg1: *const FaissClustering) -> usize;
-}
-extern "C" {
-    pub fn faiss_Clustering_d(arg1: *const FaissClustering) -> usize;
-}
-extern "C" {
-    pub fn faiss_Clustering_k(arg1: *const FaissClustering) -> usize;
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct FaissClusteringIterationStats_H {
-    _unused: [u8; 0],
-}
-pub type FaissClusteringIterationStats = FaissClusteringIterationStats_H;
-extern "C" {
-    pub fn faiss_ClusteringIterationStats_obj(arg1: *const FaissClusteringIterationStats) -> f32;
-}
-extern "C" {
-    pub fn faiss_ClusteringIterationStats_time(arg1: *const FaissClusteringIterationStats) -> f64;
-}
-extern "C" {
-    pub fn faiss_ClusteringIterationStats_time_search(
-        arg1: *const FaissClusteringIterationStats,
-    ) -> f64;
-}
-extern "C" {
-    pub fn faiss_ClusteringIterationStats_imbalance_factor(
-        arg1: *const FaissClusteringIterationStats,
-    ) -> f64;
-}
-extern "C" {
-    pub fn faiss_ClusteringIterationStats_nsplit(
-        arg1: *const FaissClusteringIterationStats,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_centroids(
-        clustering: *mut FaissClustering,
-        centroids: *mut *mut f32,
-        size: *mut usize,
-    );
-}
-extern "C" {
-    pub fn faiss_Clustering_iteration_stats(
-        clustering: *mut FaissClustering,
-        iteration_stats: *mut *mut FaissClusteringIterationStats,
-        size: *mut usize,
-    );
-}
-extern "C" {
-    pub fn faiss_Clustering_new(
-        p_clustering: *mut *mut FaissClustering,
-        d: ::std::os::raw::c_int,
-        k: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_new_with_params(
-        p_clustering: *mut *mut FaissClustering,
-        d: ::std::os::raw::c_int,
-        k: ::std::os::raw::c_int,
-        cp: *const FaissClusteringParameters,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_train(
-        clustering: *mut FaissClustering,
-        n: idx_t,
-        x: *const f32,
-        index: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_Clustering_free(clustering: *mut FaissClustering);
-}
-extern "C" {
-    pub fn faiss_kmeans_clustering(
-        d: usize,
-        n: usize,
-        k: usize,
-        x: *const f32,
-        centroids: *mut f32,
-        q_error: *mut f32,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissIndexIVFFlat = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexIVFFlat_free(obj: *mut FaissIndexIVFFlat);
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIVFFlat;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_nlist(arg1: *const FaissIndexIVFFlat) -> usize;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_nprobe(arg1: *const FaissIndexIVFFlat) -> usize;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_set_nprobe(arg1: *mut FaissIndexIVFFlat, arg2: usize);
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_quantizer(arg1: *const FaissIndexIVFFlat) -> *mut FaissIndex;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_quantizer_trains_alone(
-        arg1: *const FaissIndexIVFFlat,
-    ) -> ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_own_fields(arg1: *const FaissIndexIVFFlat) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_set_own_fields(
-        arg1: *mut FaissIndexIVFFlat,
-        arg2: ::std::os::raw::c_int,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_new(p_index: *mut *mut FaissIndexIVFFlat) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_new_with(
-        p_index: *mut *mut FaissIndexIVFFlat,
-        quantizer: *mut FaissIndex,
-        d: usize,
-        nlist: usize,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_new_with_metric(
-        p_index: *mut *mut FaissIndexIVFFlat,
-        quantizer: *mut FaissIndex,
-        d: usize,
-        nlist: usize,
-        metric: FaissMetricType,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_add_core(
-        index: *mut FaissIndexIVFFlat,
-        n: idx_t,
-        x: *const f32,
-        xids: *const idx_t,
-        precomputed_idx: *const i64,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFFlat_update_vectors(
-        index: *mut FaissIndexIVFFlat,
-        nv: ::std::os::raw::c_int,
-        idx: *mut idx_t,
-        v: *const f32,
-    ) -> ::std::os::raw::c_int;
-}
-#[repr(u32)]
-#[non_exhaustive]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum FaissQuantizerType {
-    QT_8bit = 0,
-    QT_4bit = 1,
-    QT_8bit_uniform = 2,
-    QT_4bit_uniform = 3,
-    QT_fp16 = 4,
-    QT_8bit_direct = 5,
-    QT_6bit = 6,
-}
-pub type FaissIndexScalarQuantizer = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexScalarQuantizer_new(
-        p_index: *mut *mut FaissIndexScalarQuantizer,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexScalarQuantizer_new_with(
-        p_index: *mut *mut FaissIndexScalarQuantizer,
-        d: idx_t,
-        qt: FaissQuantizerType,
-        metric: FaissMetricType,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexScalarQuantizer_cast(arg1: *mut FaissIndex)
-        -> *mut FaissIndexScalarQuantizer;
-}
-extern "C" {
-    pub fn faiss_IndexScalarQuantizer_free(obj: *mut FaissIndexScalarQuantizer);
-}
-pub type FaissIndexIVFScalarQuantizer = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_cast(
-        arg1: *mut FaissIndex,
-    ) -> *mut FaissIndexIVFScalarQuantizer;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_free(obj: *mut FaissIndexIVFScalarQuantizer);
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_new(
-        p_index: *mut *mut FaissIndexIVFScalarQuantizer,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_new_with(
-        p_index: *mut *mut FaissIndexIVFScalarQuantizer,
-        quantizer: *mut FaissIndex,
-        d: idx_t,
-        nlist: usize,
-        qt: FaissQuantizerType,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_new_with_metric(
-        p_index: *mut *mut FaissIndexIVFScalarQuantizer,
-        quantizer: *mut FaissIndex,
-        d: usize,
-        nlist: usize,
-        qt: FaissQuantizerType,
-        metric: FaissMetricType,
-        encode_residual: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_nlist(arg1: *const FaissIndexIVFScalarQuantizer) -> usize;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_nprobe(arg1: *const FaissIndexIVFScalarQuantizer)
-        -> usize;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_set_nprobe(
-        arg1: *mut FaissIndexIVFScalarQuantizer,
-        arg2: usize,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_quantizer(
-        arg1: *const FaissIndexIVFScalarQuantizer,
-    ) -> *mut FaissIndex;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_own_fields(
-        arg1: *const FaissIndexIVFScalarQuantizer,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_set_own_fields(
-        arg1: *mut FaissIndexIVFScalarQuantizer,
-        arg2: ::std::os::raw::c_int,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexIVFScalarQuantizer_add_core(
-        index: *mut FaissIndexIVFScalarQuantizer,
-        n: idx_t,
-        x: *const f32,
-        xids: *const idx_t,
-        precomputed_idx: *const idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FILE = [u64; 27usize];
-extern "C" {
-    pub fn faiss_clone_index(
-        arg1: *const FaissIndex,
-        p_out: *mut *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct FaissIndexBinary_H {
-    _unused: [u8; 0],
-}
-pub type FaissIndexBinary = FaissIndexBinary_H;
-extern "C" {
-    pub fn faiss_IndexBinary_free(obj: *mut FaissIndexBinary);
-}
-extern "C" {
-    pub fn faiss_IndexBinary_d(arg1: *const FaissIndexBinary) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_is_trained(arg1: *const FaissIndexBinary) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_ntotal(arg1: *const FaissIndexBinary) -> idx_t;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_metric_type(arg1: *const FaissIndexBinary) -> FaissMetricType;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_verbose(arg1: *const FaissIndexBinary) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_set_verbose(arg1: *mut FaissIndexBinary, arg2: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_IndexBinary_train(
-        index: *mut FaissIndexBinary,
-        n: idx_t,
-        x: *const u8,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_add(
-        index: *mut FaissIndexBinary,
-        n: idx_t,
-        x: *const u8,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_add_with_ids(
-        index: *mut FaissIndexBinary,
-        n: idx_t,
-        x: *const u8,
-        xids: *const idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_search(
-        index: *const FaissIndexBinary,
-        n: idx_t,
-        x: *const u8,
-        k: idx_t,
-        distances: *mut i32,
-        labels: *mut idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_range_search(
-        index: *const FaissIndexBinary,
-        n: idx_t,
-        x: *const u8,
-        radius: ::std::os::raw::c_int,
-        result: *mut FaissRangeSearchResult,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_assign(
-        index: *mut FaissIndexBinary,
-        n: idx_t,
-        x: *const u8,
-        labels: *mut idx_t,
-        k: idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_reset(index: *mut FaissIndexBinary) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_remove_ids(
-        index: *mut FaissIndexBinary,
-        sel: *const FaissIDSelector,
-        n_removed: *mut usize,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_reconstruct(
-        index: *const FaissIndexBinary,
-        key: idx_t,
-        recons: *mut u8,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexBinary_reconstruct_n(
-        index: *const FaissIndexBinary,
-        i0: idx_t,
-        ni: idx_t,
-        recons: *mut u8,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissIndexIDMap = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexIDMap_own_fields(arg1: *const FaissIndexIDMap) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIDMap_set_own_fields(arg1: *mut FaissIndexIDMap, arg2: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_IndexIDMap_new(
-        p_index: *mut *mut FaissIndexIDMap,
-        index: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIDMap_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIDMap;
-}
-extern "C" {
-    pub fn faiss_IndexIDMap_id_map(
-        index: *mut FaissIndexIDMap,
-        p_id_map: *mut *mut idx_t,
-        p_size: *mut usize,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexIDMap_sub_index(index: *mut FaissIndexIDMap) -> *mut FaissIndex;
-}
-pub type FaissIndexIDMap2 = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexIDMap2_own_fields(arg1: *const FaissIndexIDMap2) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIDMap2_set_own_fields(
-        arg1: *mut FaissIndexIDMap2,
-        arg2: ::std::os::raw::c_int,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexIDMap2_new(
-        p_index: *mut *mut FaissIndexIDMap2,
-        index: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIDMap2_construct_rev_map(
-        index: *mut FaissIndexIDMap2,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexIDMap2_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIDMap2;
-}
-extern "C" {
-    pub fn faiss_IndexIDMap2_id_map(
-        index: *mut FaissIndexIDMap2,
-        p_id_map: *mut *mut idx_t,
-        p_size: *mut usize,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexIDMap2_sub_index(index: *mut FaissIndexIDMap2) -> *mut FaissIndex;
-}
-extern "C" {
-    pub fn faiss_pairwise_L2sqr(
-        d: i64,
-        nq: i64,
-        xq: *const f32,
-        nb: i64,
-        xb: *const f32,
-        dis: *mut f32,
-        ldq: i64,
-        ldb: i64,
-        ldd: i64,
-    );
-}
-extern "C" {
-    pub fn faiss_pairwise_L2sqr_with_defaults(
-        d: i64,
-        nq: i64,
-        xq: *const f32,
-        nb: i64,
-        xb: *const f32,
-        dis: *mut f32,
-    );
-}
-extern "C" {
-    pub fn faiss_fvec_inner_products_ny(
-        ip: *mut f32,
-        x: *const f32,
-        y: *const f32,
-        d: usize,
-        ny: usize,
-    );
-}
-extern "C" {
-    pub fn faiss_fvec_L2sqr_ny(dis: *mut f32, x: *const f32, y: *const f32, d: usize, ny: usize);
-}
-extern "C" {
-    pub fn faiss_fvec_norm_L2sqr(x: *const f32, d: usize) -> f32;
-}
-extern "C" {
-    pub fn faiss_fvec_norms_L2(norms: *mut f32, x: *const f32, d: usize, nx: usize);
-}
-extern "C" {
-    pub fn faiss_fvec_norms_L2sqr(norms: *mut f32, x: *const f32, d: usize, nx: usize);
-}
-extern "C" {
-    pub fn faiss_fvec_renorm_L2(d: usize, nx: usize, x: *mut f32);
-}
-extern "C" {
-    pub fn faiss_set_distance_compute_blas_threshold(value: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_get_distance_compute_blas_threshold() -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_set_distance_compute_blas_query_bs(value: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_get_distance_compute_blas_query_bs() -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_set_distance_compute_blas_database_bs(value: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_get_distance_compute_blas_database_bs() -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_set_distance_compute_min_k_reservoir(value: ::std::os::raw::c_int);
-}
-extern "C" {
-    pub fn faiss_get_distance_compute_min_k_reservoir() -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_write_index(idx: *const FaissIndex, f: *mut FILE) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_write_index_fname(
-        idx: *const FaissIndex,
-        fname: *const ::std::os::raw::c_char,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_read_index(
-        f: *mut FILE,
-        io_flags: ::std::os::raw::c_int,
-        p_out: *mut *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_read_index_fname(
-        fname: *const ::std::os::raw::c_char,
-        io_flags: ::std::os::raw::c_int,
-        p_out: *mut *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_write_index_binary(
-        idx: *const FaissIndexBinary,
-        f: *mut FILE,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_write_index_binary_fname(
-        idx: *const FaissIndexBinary,
-        fname: *const ::std::os::raw::c_char,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_read_index_binary(
-        f: *mut FILE,
-        io_flags: ::std::os::raw::c_int,
-        p_out: *mut *mut FaissIndexBinary,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_read_index_binary_fname(
-        fname: *const ::std::os::raw::c_char,
-        io_flags: ::std::os::raw::c_int,
-        p_out: *mut *mut FaissIndexBinary,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissIndexReplicas = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexReplicas_free(obj: *mut FaissIndexReplicas);
-}
-extern "C" {
-    pub fn faiss_IndexReplicas_own_fields(arg1: *const FaissIndexReplicas)
-        -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexReplicas_set_own_fields(
-        arg1: *mut FaissIndexReplicas,
-        arg2: ::std::os::raw::c_int,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexReplicas_new(
-        p_index: *mut *mut FaissIndexReplicas,
-        d: idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexReplicas_new_with_options(
-        p_index: *mut *mut FaissIndexReplicas,
-        d: idx_t,
-        threaded: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexReplicas_add_replica(
-        index: *mut FaissIndexReplicas,
-        replica: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexReplicas_remove_replica(
-        index: *mut FaissIndexReplicas,
-        replica: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexReplicas_at(
-        index: *mut FaissIndexReplicas,
-        i: ::std::os::raw::c_int,
-    ) -> *mut FaissIndex;
-}
-#[repr(i32)]
-#[non_exhaustive]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum FaissErrorCode {
-    OK = 0,
-    UNKNOWN_EXCEPT = -1,
-    FAISS_EXCEPT = -2,
-    STD_EXCEPT = -4,
-}
-extern "C" {
-    pub fn faiss_get_last_error() -> *const ::std::os::raw::c_char;
-}
-pub type FaissIndexLSH = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexLSH_free(obj: *mut FaissIndexLSH);
-}
-extern "C" {
-    pub fn faiss_IndexLSH_cast(arg1: *mut FaissIndex) -> *mut FaissIndexLSH;
-}
-extern "C" {
-    pub fn faiss_IndexLSH_nbits(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexLSH_code_size(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexLSH_rotate_data(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexLSH_train_thresholds(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexLSH_new(
-        p_index: *mut *mut FaissIndexLSH,
-        d: idx_t,
-        nbits: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexLSH_new_with_options(
-        p_index: *mut *mut FaissIndexLSH,
-        d: idx_t,
-        nbits: ::std::os::raw::c_int,
-        rotate_data: ::std::os::raw::c_int,
-        train_thresholds: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct FaissParameterRange_H {
-    _unused: [u8; 0],
-}
-pub type FaissParameterRange = FaissParameterRange_H;
-extern "C" {
-    pub fn faiss_ParameterRange_name(
-        arg1: *const FaissParameterRange,
-    ) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn faiss_ParameterRange_values(
-        arg1: *mut FaissParameterRange,
-        arg2: *mut *mut f64,
-        arg3: *mut usize,
-    );
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct FaissParameterSpace_H {
-    _unused: [u8; 0],
-}
-pub type FaissParameterSpace = FaissParameterSpace_H;
-extern "C" {
-    pub fn faiss_ParameterSpace_free(obj: *mut FaissParameterSpace);
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_new(space: *mut *mut FaissParameterSpace) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_n_combinations(arg1: *const FaissParameterSpace) -> usize;
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_combination_name(
-        arg1: *const FaissParameterSpace,
-        arg2: usize,
-        arg3: *mut ::std::os::raw::c_char,
-        arg4: usize,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_set_index_parameters(
-        arg1: *const FaissParameterSpace,
-        arg2: *mut FaissIndex,
-        arg3: *const ::std::os::raw::c_char,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_set_index_parameters_cno(
-        arg1: *const FaissParameterSpace,
-        arg2: *mut FaissIndex,
-        arg3: usize,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_set_index_parameter(
-        arg1: *const FaissParameterSpace,
-        arg2: *mut FaissIndex,
-        arg3: *const ::std::os::raw::c_char,
-        arg4: f64,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_display(arg1: *const FaissParameterSpace);
-}
-extern "C" {
-    pub fn faiss_ParameterSpace_add_range(
-        arg1: *mut FaissParameterSpace,
-        arg2: *const ::std::os::raw::c_char,
-        arg3: *mut *mut FaissParameterRange,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissIndexShards = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexShards_free(obj: *mut FaissIndexShards);
-}
-extern "C" {
-    pub fn faiss_IndexShards_own_fields(arg1: *const FaissIndexShards) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexShards_set_own_fields(
-        arg1: *mut FaissIndexShards,
-        arg2: ::std::os::raw::c_int,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexShards_successive_ids(arg1: *const FaissIndexShards)
-        -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexShards_set_successive_ids(
-        arg1: *mut FaissIndexShards,
-        arg2: ::std::os::raw::c_int,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexShards_new(
-        p_index: *mut *mut FaissIndexShards,
-        d: idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexShards_new_with_options(
-        p_index: *mut *mut FaissIndexShards,
-        d: idx_t,
-        threaded: ::std::os::raw::c_int,
-        successive_ids: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexShards_add_shard(
-        index: *mut FaissIndexShards,
-        shard: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexShards_remove_shard(
-        index: *mut FaissIndexShards,
-        shard: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexShards_at(
-        index: *mut FaissIndexShards,
-        i: ::std::os::raw::c_int,
-    ) -> *mut FaissIndex;
-}
-pub type FaissIndexFlat = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexFlat_new(p_index: *mut *mut FaissIndexFlat) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexFlat_new_with(
-        p_index: *mut *mut FaissIndexFlat,
-        d: idx_t,
-        metric: FaissMetricType,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexFlat_xb(index: *mut FaissIndexFlat, p_xb: *mut *mut f32, p_size: *mut usize);
-}
-extern "C" {
-    pub fn faiss_IndexFlat_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlat;
-}
-extern "C" {
-    pub fn faiss_IndexFlat_free(obj: *mut FaissIndexFlat);
-}
-extern "C" {
-    pub fn faiss_IndexFlat_compute_distance_subset(
-        index: *mut FaissIndex,
-        n: idx_t,
-        x: *const f32,
-        k: idx_t,
-        distances: *mut f32,
-        labels: *const idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissIndexFlatIP = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexFlatIP_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlatIP;
-}
-extern "C" {
-    pub fn faiss_IndexFlatIP_free(obj: *mut FaissIndexFlatIP);
-}
-extern "C" {
-    pub fn faiss_IndexFlatIP_new(p_index: *mut *mut FaissIndexFlatIP) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexFlatIP_new_with(
-        p_index: *mut *mut FaissIndexFlatIP,
-        d: idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissIndexFlatL2 = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexFlatL2_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlatL2;
-}
-extern "C" {
-    pub fn faiss_IndexFlatL2_free(obj: *mut FaissIndexFlatL2);
-}
-extern "C" {
-    pub fn faiss_IndexFlatL2_new(p_index: *mut *mut FaissIndexFlatL2) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexFlatL2_new_with(
-        p_index: *mut *mut FaissIndexFlatL2,
-        d: idx_t,
-    ) -> ::std::os::raw::c_int;
-}
-pub type FaissIndexRefineFlat = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexRefineFlat_new(
-        p_index: *mut *mut FaissIndexRefineFlat,
-        base_index: *mut FaissIndex,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexRefineFlat_free(obj: *mut FaissIndexRefineFlat);
-}
-extern "C" {
-    pub fn faiss_IndexRefineFlat_cast(arg1: *mut FaissIndex) -> *mut FaissIndexRefineFlat;
-}
-extern "C" {
-    pub fn faiss_IndexRefineFlat_own_fields(
-        arg1: *const FaissIndexRefineFlat,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexRefineFlat_set_own_fields(
-        arg1: *mut FaissIndexRefineFlat,
-        arg2: ::std::os::raw::c_int,
-    );
-}
-extern "C" {
-    pub fn faiss_IndexRefineFlat_k_factor(arg1: *const FaissIndexRefineFlat) -> f32;
-}
-extern "C" {
-    pub fn faiss_IndexRefineFlat_set_k_factor(arg1: *mut FaissIndexRefineFlat, arg2: f32);
-}
-pub type FaissIndexFlat1D = FaissIndex_H;
-extern "C" {
-    pub fn faiss_IndexFlat1D_cast(arg1: *mut FaissIndex) -> *mut FaissIndexFlat1D;
-}
-extern "C" {
-    pub fn faiss_IndexFlat1D_free(obj: *mut FaissIndexFlat1D);
-}
-extern "C" {
-    pub fn faiss_IndexFlat1D_new(p_index: *mut *mut FaissIndexFlat1D) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexFlat1D_new_with(
-        p_index: *mut *mut FaissIndexFlat1D,
-        continuous_update: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn faiss_IndexFlat1D_update_permutation(
-        index: *mut FaissIndexFlat1D,
-    ) -> ::std::os::raw::c_int;
-}
 pub type FaissSearchParametersIVF = FaissSearchParameters_H;
 extern "C" {
     pub fn faiss_SearchParametersIVF_free(obj: *mut FaissSearchParametersIVF);
@@ -1760,12 +914,534 @@ extern "C" {
 extern "C" {
     pub fn faiss_get_indexIVF_stats() -> *mut FaissIndexIVFStats;
 }
+pub type FaissIndexIVFFlat = FaissIndex_H;
 extern "C" {
-    pub fn faiss_index_factory(
-        p_index: *mut *mut FaissIndex,
-        d: ::std::os::raw::c_int,
-        description: *const ::std::os::raw::c_char,
+    pub fn faiss_IndexIVFFlat_free(obj: *mut FaissIndexIVFFlat);
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIVFFlat;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_nlist(arg1: *const FaissIndexIVFFlat) -> usize;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_nprobe(arg1: *const FaissIndexIVFFlat) -> usize;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_set_nprobe(arg1: *mut FaissIndexIVFFlat, arg2: usize);
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_quantizer(arg1: *const FaissIndexIVFFlat) -> *mut FaissIndex;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_quantizer_trains_alone(
+        arg1: *const FaissIndexIVFFlat,
+    ) -> ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_own_fields(arg1: *const FaissIndexIVFFlat) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_set_own_fields(
+        arg1: *mut FaissIndexIVFFlat,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_new(p_index: *mut *mut FaissIndexIVFFlat) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_new_with(
+        p_index: *mut *mut FaissIndexIVFFlat,
+        quantizer: *mut FaissIndex,
+        d: usize,
+        nlist: usize,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_new_with_metric(
+        p_index: *mut *mut FaissIndexIVFFlat,
+        quantizer: *mut FaissIndex,
+        d: usize,
+        nlist: usize,
         metric: FaissMetricType,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_add_core(
+        index: *mut FaissIndexIVFFlat,
+        n: idx_t,
+        x: *const f32,
+        xids: *const idx_t,
+        precomputed_idx: *const i64,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFFlat_update_vectors(
+        index: *mut FaissIndexIVFFlat,
+        nv: ::std::os::raw::c_int,
+        idx: *mut idx_t,
+        v: *const f32,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissIndexLSH = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexLSH_free(obj: *mut FaissIndexLSH);
+}
+extern "C" {
+    pub fn faiss_IndexLSH_cast(arg1: *mut FaissIndex) -> *mut FaissIndexLSH;
+}
+extern "C" {
+    pub fn faiss_IndexLSH_nbits(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexLSH_code_size(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexLSH_rotate_data(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexLSH_train_thresholds(arg1: *const FaissIndexLSH) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexLSH_new(
+        p_index: *mut *mut FaissIndexLSH,
+        d: idx_t,
+        nbits: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexLSH_new_with_options(
+        p_index: *mut *mut FaissIndexLSH,
+        d: idx_t,
+        nbits: ::std::os::raw::c_int,
+        rotate_data: ::std::os::raw::c_int,
+        train_thresholds: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissIndexBinary_H {
+    _unused: [u8; 0],
+}
+pub type FaissIndexBinary = FaissIndexBinary_H;
+extern "C" {
+    pub fn faiss_IndexBinary_free(obj: *mut FaissIndexBinary);
+}
+extern "C" {
+    pub fn faiss_IndexBinary_d(arg1: *const FaissIndexBinary) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_is_trained(arg1: *const FaissIndexBinary) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_ntotal(arg1: *const FaissIndexBinary) -> idx_t;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_metric_type(arg1: *const FaissIndexBinary) -> FaissMetricType;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_verbose(arg1: *const FaissIndexBinary) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_set_verbose(arg1: *mut FaissIndexBinary, arg2: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_IndexBinary_train(
+        index: *mut FaissIndexBinary,
+        n: idx_t,
+        x: *const u8,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_add(
+        index: *mut FaissIndexBinary,
+        n: idx_t,
+        x: *const u8,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_add_with_ids(
+        index: *mut FaissIndexBinary,
+        n: idx_t,
+        x: *const u8,
+        xids: *const idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_search(
+        index: *const FaissIndexBinary,
+        n: idx_t,
+        x: *const u8,
+        k: idx_t,
+        distances: *mut i32,
+        labels: *mut idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_search_with_params(
+        index: *const FaissIndexBinary,
+        n: idx_t,
+        x: *const u8,
+        k: idx_t,
+        params: *const FaissSearchParameters,
+        distances: *mut i32,
+        labels: *mut idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_range_search(
+        index: *const FaissIndexBinary,
+        n: idx_t,
+        x: *const u8,
+        radius: ::std::os::raw::c_int,
+        result: *mut FaissRangeSearchResult,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_assign(
+        index: *mut FaissIndexBinary,
+        n: idx_t,
+        x: *const u8,
+        labels: *mut idx_t,
+        k: idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_reset(index: *mut FaissIndexBinary) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_remove_ids(
+        index: *mut FaissIndexBinary,
+        sel: *const FaissIDSelector,
+        n_removed: *mut usize,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_reconstruct(
+        index: *const FaissIndexBinary,
+        key: idx_t,
+        recons: *mut u8,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexBinary_reconstruct_n(
+        index: *const FaissIndexBinary,
+        i0: idx_t,
+        ni: idx_t,
+        recons: *mut u8,
+    ) -> ::std::os::raw::c_int;
+}
+#[repr(u32)]
+#[non_exhaustive]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum FaissQuantizerType {
+    QT_8bit = 0,
+    QT_4bit = 1,
+    QT_8bit_uniform = 2,
+    QT_4bit_uniform = 3,
+    QT_fp16 = 4,
+    QT_8bit_direct = 5,
+    QT_6bit = 6,
+    QT_bf16 = 7,
+    QT_8bit_direct_signed = 8,
+}
+pub type FaissIndexScalarQuantizer = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexScalarQuantizer_new(
+        p_index: *mut *mut FaissIndexScalarQuantizer,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexScalarQuantizer_new_with(
+        p_index: *mut *mut FaissIndexScalarQuantizer,
+        d: idx_t,
+        qt: FaissQuantizerType,
+        metric: FaissMetricType,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexScalarQuantizer_cast(arg1: *mut FaissIndex)
+        -> *mut FaissIndexScalarQuantizer;
+}
+extern "C" {
+    pub fn faiss_IndexScalarQuantizer_free(obj: *mut FaissIndexScalarQuantizer);
+}
+pub type FaissIndexIVFScalarQuantizer = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_cast(
+        arg1: *mut FaissIndex,
+    ) -> *mut FaissIndexIVFScalarQuantizer;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_free(obj: *mut FaissIndexIVFScalarQuantizer);
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_new(
+        p_index: *mut *mut FaissIndexIVFScalarQuantizer,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_new_with(
+        p_index: *mut *mut FaissIndexIVFScalarQuantizer,
+        quantizer: *mut FaissIndex,
+        d: idx_t,
+        nlist: usize,
+        qt: FaissQuantizerType,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_new_with_metric(
+        p_index: *mut *mut FaissIndexIVFScalarQuantizer,
+        quantizer: *mut FaissIndex,
+        d: usize,
+        nlist: usize,
+        qt: FaissQuantizerType,
+        metric: FaissMetricType,
+        encode_residual: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_nlist(arg1: *const FaissIndexIVFScalarQuantizer) -> usize;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_nprobe(arg1: *const FaissIndexIVFScalarQuantizer)
+        -> usize;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_set_nprobe(
+        arg1: *mut FaissIndexIVFScalarQuantizer,
+        arg2: usize,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_quantizer(
+        arg1: *const FaissIndexIVFScalarQuantizer,
+    ) -> *mut FaissIndex;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_own_fields(
+        arg1: *const FaissIndexIVFScalarQuantizer,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_set_own_fields(
+        arg1: *mut FaissIndexIVFScalarQuantizer,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexIVFScalarQuantizer_add_core(
+        index: *mut FaissIndexIVFScalarQuantizer,
+        n: idx_t,
+        x: *const f32,
+        xids: *const idx_t,
+        precomputed_idx: *const idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissVectorTransform_H {
+    _unused: [u8; 0],
+}
+pub type FaissVectorTransform = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_VectorTransform_free(obj: *mut FaissVectorTransform);
+}
+extern "C" {
+    pub fn faiss_VectorTransform_is_trained(
+        arg1: *const FaissVectorTransform,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_VectorTransform_d_in(arg1: *const FaissVectorTransform) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_VectorTransform_d_out(arg1: *const FaissVectorTransform) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_VectorTransform_train(
+        vt: *mut FaissVectorTransform,
+        n: idx_t,
+        x: *const f32,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_VectorTransform_apply(
+        vt: *const FaissVectorTransform,
+        n: idx_t,
+        x: *const f32,
+    ) -> *mut f32;
+}
+extern "C" {
+    pub fn faiss_VectorTransform_apply_noalloc(
+        vt: *const FaissVectorTransform,
+        n: idx_t,
+        x: *const f32,
+        xt: *mut f32,
+    );
+}
+extern "C" {
+    pub fn faiss_VectorTransform_reverse_transform(
+        vt: *const FaissVectorTransform,
+        n: idx_t,
+        xt: *const f32,
+        x: *mut f32,
+    );
+}
+pub type FaissLinearTransform = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_LinearTransform_free(obj: *mut FaissLinearTransform);
+}
+extern "C" {
+    pub fn faiss_LinearTransform_transform_transpose(
+        vt: *const FaissLinearTransform,
+        n: idx_t,
+        y: *const f32,
+        x: *mut f32,
+    );
+}
+extern "C" {
+    pub fn faiss_LinearTransform_set_is_orthonormal(vt: *mut FaissLinearTransform);
+}
+extern "C" {
+    pub fn faiss_LinearTransform_have_bias(
+        arg1: *const FaissLinearTransform,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_LinearTransform_is_orthonormal(
+        arg1: *const FaissLinearTransform,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissRandomRotationMatrix = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_RandomRotationMatrix_free(obj: *mut FaissRandomRotationMatrix);
+}
+extern "C" {
+    pub fn faiss_RandomRotationMatrix_new_with(
+        p_vt: *mut *mut FaissRandomRotationMatrix,
+        d_in: ::std::os::raw::c_int,
+        d_out: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissPCAMatrix = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_PCAMatrix_free(obj: *mut FaissPCAMatrix);
+}
+extern "C" {
+    pub fn faiss_PCAMatrix_new_with(
+        p_vt: *mut *mut FaissPCAMatrix,
+        d_in: ::std::os::raw::c_int,
+        d_out: ::std::os::raw::c_int,
+        eigen_power: f32,
+        random_rotation: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_PCAMatrix_eigen_power(arg1: *const FaissPCAMatrix) -> f32;
+}
+extern "C" {
+    pub fn faiss_PCAMatrix_random_rotation(arg1: *const FaissPCAMatrix) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_PCAMatrix_balanced_bins(arg1: *const FaissPCAMatrix) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_PCAMatrix_set_balanced_bins(
+        arg1: *mut FaissPCAMatrix,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+pub type FaissITQMatrix = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_ITQMatrix_free(obj: *mut FaissITQMatrix);
+}
+extern "C" {
+    pub fn faiss_ITQMatrix_new_with(
+        p_vt: *mut *mut FaissITQMatrix,
+        d: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissITQTransform = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_ITQTransform_free(obj: *mut FaissITQTransform);
+}
+extern "C" {
+    pub fn faiss_ITQTransform_new_with(
+        p_vt: *mut *mut FaissITQTransform,
+        d_in: ::std::os::raw::c_int,
+        d_out: ::std::os::raw::c_int,
+        do_pca: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ITQTransform_do_pca(arg1: *const FaissITQTransform) -> ::std::os::raw::c_int;
+}
+pub type FaissOPQMatrix = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_OPQMatrix_free(obj: *mut FaissOPQMatrix);
+}
+extern "C" {
+    pub fn faiss_OPQMatrix_new_with(
+        p_vt: *mut *mut FaissOPQMatrix,
+        d: ::std::os::raw::c_int,
+        M: ::std::os::raw::c_int,
+        d2: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_OPQMatrix_verbose(arg1: *const FaissOPQMatrix) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_OPQMatrix_set_verbose(arg1: *mut FaissOPQMatrix, arg2: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_OPQMatrix_niter(arg1: *const FaissOPQMatrix) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_OPQMatrix_set_niter(arg1: *mut FaissOPQMatrix, arg2: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_OPQMatrix_niter_pq(arg1: *const FaissOPQMatrix) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_OPQMatrix_set_niter_pq(arg1: *mut FaissOPQMatrix, arg2: ::std::os::raw::c_int);
+}
+pub type FaissRemapDimensionsTransform = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_RemapDimensionsTransform_free(obj: *mut FaissRemapDimensionsTransform);
+}
+extern "C" {
+    pub fn faiss_RemapDimensionsTransform_new_with(
+        p_vt: *mut *mut FaissRemapDimensionsTransform,
+        d_in: ::std::os::raw::c_int,
+        d_out: ::std::os::raw::c_int,
+        uniform: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissNormalizationTransform = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_NormalizationTransform_free(obj: *mut FaissNormalizationTransform);
+}
+extern "C" {
+    pub fn faiss_NormalizationTransform_new_with(
+        p_vt: *mut *mut FaissNormalizationTransform,
+        d: ::std::os::raw::c_int,
+        norm: f32,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_NormalizationTransform_norm(arg1: *const FaissNormalizationTransform) -> f32;
+}
+pub type FaissCenteringTransform = FaissVectorTransform_H;
+extern "C" {
+    pub fn faiss_CenteringTransform_free(obj: *mut FaissCenteringTransform);
+}
+extern "C" {
+    pub fn faiss_CenteringTransform_new_with(
+        p_vt: *mut *mut FaissCenteringTransform,
+        d: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
 pub type FaissIndexPreTransform = FaissIndex_H;
@@ -1812,6 +1488,502 @@ extern "C" {
         index: *mut FaissIndexPreTransform,
         ltrans: *mut FaissVectorTransform,
     ) -> ::std::os::raw::c_int;
+}
+pub type FaissIndexReplicas = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexReplicas_free(obj: *mut FaissIndexReplicas);
+}
+extern "C" {
+    pub fn faiss_IndexReplicas_own_fields(arg1: *const FaissIndexReplicas)
+        -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexReplicas_set_own_fields(
+        arg1: *mut FaissIndexReplicas,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexReplicas_new(
+        p_index: *mut *mut FaissIndexReplicas,
+        d: idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexReplicas_new_with_options(
+        p_index: *mut *mut FaissIndexReplicas,
+        d: idx_t,
+        threaded: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexReplicas_add_replica(
+        index: *mut FaissIndexReplicas,
+        replica: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexReplicas_remove_replica(
+        index: *mut FaissIndexReplicas,
+        replica: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexReplicas_at(
+        index: *mut FaissIndexReplicas,
+        i: ::std::os::raw::c_int,
+    ) -> *mut FaissIndex;
+}
+pub type FaissIndexShards = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexShards_free(obj: *mut FaissIndexShards);
+}
+extern "C" {
+    pub fn faiss_IndexShards_own_fields(arg1: *const FaissIndexShards) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexShards_set_own_fields(
+        arg1: *mut FaissIndexShards,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexShards_successive_ids(arg1: *const FaissIndexShards)
+        -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexShards_set_successive_ids(
+        arg1: *mut FaissIndexShards,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexShards_new(
+        p_index: *mut *mut FaissIndexShards,
+        d: idx_t,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexShards_new_with_options(
+        p_index: *mut *mut FaissIndexShards,
+        d: idx_t,
+        threaded: ::std::os::raw::c_int,
+        successive_ids: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexShards_add_shard(
+        index: *mut FaissIndexShards,
+        shard: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexShards_remove_shard(
+        index: *mut FaissIndexShards,
+        shard: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexShards_at(
+        index: *mut FaissIndexShards,
+        i: ::std::os::raw::c_int,
+    ) -> *mut FaissIndex;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissParameterRange_H {
+    _unused: [u8; 0],
+}
+pub type FaissParameterRange = FaissParameterRange_H;
+extern "C" {
+    pub fn faiss_ParameterRange_name(
+        arg1: *const FaissParameterRange,
+    ) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn faiss_ParameterRange_values(
+        arg1: *mut FaissParameterRange,
+        arg2: *mut *mut f64,
+        arg3: *mut usize,
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissParameterSpace_H {
+    _unused: [u8; 0],
+}
+pub type FaissParameterSpace = FaissParameterSpace_H;
+extern "C" {
+    pub fn faiss_ParameterSpace_free(obj: *mut FaissParameterSpace);
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_new(space: *mut *mut FaissParameterSpace) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_n_combinations(arg1: *const FaissParameterSpace) -> usize;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_combination_name(
+        arg1: *const FaissParameterSpace,
+        arg2: usize,
+        arg3: *mut ::std::os::raw::c_char,
+        arg4: usize,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_set_index_parameters(
+        arg1: *const FaissParameterSpace,
+        arg2: *mut FaissIndex,
+        arg3: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_set_index_parameters_cno(
+        arg1: *const FaissParameterSpace,
+        arg2: *mut FaissIndex,
+        arg3: usize,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_set_index_parameters_binary(
+        arg1: *const FaissParameterSpace,
+        arg2: *mut FaissIndexBinary,
+        arg3: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_set_index_parameters_cno_binary(
+        arg1: *const FaissParameterSpace,
+        arg2: *mut FaissIndexBinary,
+        arg3: usize,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_set_index_parameter(
+        arg1: *const FaissParameterSpace,
+        arg2: *mut FaissIndex,
+        arg3: *const ::std::os::raw::c_char,
+        arg4: f64,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_set_index_parameter_binary(
+        arg1: *const FaissParameterSpace,
+        arg2: *mut FaissIndexBinary,
+        arg3: *const ::std::os::raw::c_char,
+        arg4: f64,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_display(arg1: *const FaissParameterSpace);
+}
+extern "C" {
+    pub fn faiss_ParameterSpace_add_range(
+        arg1: *mut FaissParameterSpace,
+        arg2: *const ::std::os::raw::c_char,
+        arg3: *mut *mut FaissParameterRange,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FILE = [u64; 27usize];
+extern "C" {
+    pub fn faiss_clone_index(
+        arg1: *const FaissIndex,
+        p_out: *mut *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_clone_index_binary(
+        arg1: *const FaissIndexBinary,
+        p_out: *mut *mut FaissIndexBinary,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_index_factory(
+        p_index: *mut *mut FaissIndex,
+        d: ::std::os::raw::c_int,
+        description: *const ::std::os::raw::c_char,
+        metric: FaissMetricType,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_index_binary_factory(
+        p_index: *mut *mut FaissIndexBinary,
+        d: ::std::os::raw::c_int,
+        description: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissIOReader_H {
+    _unused: [u8; 0],
+}
+pub type FaissIOReader = FaissIOReader_H;
+extern "C" {
+    pub fn faiss_IOReader_free(obj: *mut FaissIOReader);
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissIOWriter_H {
+    _unused: [u8; 0],
+}
+pub type FaissIOWriter = FaissIOWriter_H;
+extern "C" {
+    pub fn faiss_IOWriter_free(obj: *mut FaissIOWriter);
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissCustomIOReader_H {
+    _unused: [u8; 0],
+}
+pub type FaissCustomIOReader = FaissCustomIOReader_H;
+extern "C" {
+    pub fn faiss_CustomIOReader_free(obj: *mut FaissCustomIOReader);
+}
+extern "C" {
+    pub fn faiss_CustomIOReader_new(
+        p_out: *mut *mut FaissCustomIOReader,
+        func_in: ::std::option::Option<
+            unsafe extern "C" fn(
+                ptr: *mut ::std::os::raw::c_void,
+                size: usize,
+                nitems: usize,
+            ) -> usize,
+        >,
+    ) -> ::std::os::raw::c_int;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct FaissCustomIOWriter_H {
+    _unused: [u8; 0],
+}
+pub type FaissCustomIOWriter = FaissCustomIOWriter_H;
+extern "C" {
+    pub fn faiss_CustomIOWriter_free(obj: *mut FaissCustomIOWriter);
+}
+extern "C" {
+    pub fn faiss_CustomIOWriter_new(
+        p_out: *mut *mut FaissCustomIOWriter,
+        func_in: ::std::option::Option<
+            unsafe extern "C" fn(
+                ptr: *const ::std::os::raw::c_void,
+                size: usize,
+                nitems: usize,
+            ) -> usize,
+        >,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_write_index(idx: *const FaissIndex, f: *mut FILE) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_write_index_fname(
+        idx: *const FaissIndex,
+        fname: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_write_index_custom(
+        idx: *const FaissIndex,
+        io_writer: *mut FaissIOWriter,
+        io_flags: ::std::os::raw::c_int,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_read_index(
+        f: *mut FILE,
+        io_flags: ::std::os::raw::c_int,
+        p_out: *mut *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_read_index_fname(
+        fname: *const ::std::os::raw::c_char,
+        io_flags: ::std::os::raw::c_int,
+        p_out: *mut *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_read_index_custom(
+        io_reader: *mut FaissIOReader,
+        io_flags: ::std::os::raw::c_int,
+        p_out: *mut *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_write_index_binary(
+        idx: *const FaissIndexBinary,
+        f: *mut FILE,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_write_index_binary_fname(
+        idx: *const FaissIndexBinary,
+        fname: *const ::std::os::raw::c_char,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_write_index_binary_custom(
+        idx: *const FaissIndexBinary,
+        io_writer: *mut FaissIOWriter,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_read_index_binary(
+        f: *mut FILE,
+        io_flags: ::std::os::raw::c_int,
+        p_out: *mut *mut FaissIndexBinary,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_read_index_binary_fname(
+        fname: *const ::std::os::raw::c_char,
+        io_flags: ::std::os::raw::c_int,
+        p_out: *mut *mut FaissIndexBinary,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_read_index_binary_custom(
+        io_reader: *mut FaissIOReader,
+        io_flags: ::std::os::raw::c_int,
+        p_out: *mut *mut FaissIndexBinary,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_read_VectorTransform_fname(
+        fname: *const ::std::os::raw::c_char,
+        p_out: *mut *mut FaissVectorTransform,
+    ) -> ::std::os::raw::c_int;
+}
+pub type FaissIndexIDMap = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexIDMap_own_fields(arg1: *const FaissIndexIDMap) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIDMap_set_own_fields(arg1: *mut FaissIndexIDMap, arg2: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_IndexIDMap_new(
+        p_index: *mut *mut FaissIndexIDMap,
+        index: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIDMap_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIDMap;
+}
+extern "C" {
+    pub fn faiss_IndexIDMap_id_map(
+        index: *mut FaissIndexIDMap,
+        p_id_map: *mut *mut idx_t,
+        p_size: *mut usize,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexIDMap_sub_index(index: *mut FaissIndexIDMap) -> *mut FaissIndex;
+}
+pub type FaissIndexIDMap2 = FaissIndex_H;
+extern "C" {
+    pub fn faiss_IndexIDMap2_own_fields(arg1: *const FaissIndexIDMap2) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIDMap2_set_own_fields(
+        arg1: *mut FaissIndexIDMap2,
+        arg2: ::std::os::raw::c_int,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexIDMap2_new(
+        p_index: *mut *mut FaissIndexIDMap2,
+        index: *mut FaissIndex,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIDMap2_construct_rev_map(
+        index: *mut FaissIndexIDMap2,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_IndexIDMap2_cast(arg1: *mut FaissIndex) -> *mut FaissIndexIDMap2;
+}
+extern "C" {
+    pub fn faiss_IndexIDMap2_id_map(
+        index: *mut FaissIndexIDMap2,
+        p_id_map: *mut *mut idx_t,
+        p_size: *mut usize,
+    );
+}
+extern "C" {
+    pub fn faiss_IndexIDMap2_sub_index(index: *mut FaissIndexIDMap2) -> *mut FaissIndex;
+}
+extern "C" {
+    pub fn faiss_pairwise_L2sqr(
+        d: i64,
+        nq: i64,
+        xq: *const f32,
+        nb: i64,
+        xb: *const f32,
+        dis: *mut f32,
+        ldq: i64,
+        ldb: i64,
+        ldd: i64,
+    );
+}
+extern "C" {
+    pub fn faiss_pairwise_L2sqr_with_defaults(
+        d: i64,
+        nq: i64,
+        xq: *const f32,
+        nb: i64,
+        xb: *const f32,
+        dis: *mut f32,
+    );
+}
+extern "C" {
+    pub fn faiss_fvec_inner_products_ny(
+        ip: *mut f32,
+        x: *const f32,
+        y: *const f32,
+        d: usize,
+        ny: usize,
+    );
+}
+extern "C" {
+    pub fn faiss_fvec_L2sqr_ny(dis: *mut f32, x: *const f32, y: *const f32, d: usize, ny: usize);
+}
+extern "C" {
+    pub fn faiss_fvec_norm_L2sqr(x: *const f32, d: usize) -> f32;
+}
+extern "C" {
+    pub fn faiss_fvec_norms_L2(norms: *mut f32, x: *const f32, d: usize, nx: usize);
+}
+extern "C" {
+    pub fn faiss_fvec_norms_L2sqr(norms: *mut f32, x: *const f32, d: usize, nx: usize);
+}
+extern "C" {
+    pub fn faiss_fvec_renorm_L2(d: usize, nx: usize, x: *mut f32);
+}
+extern "C" {
+    pub fn faiss_set_distance_compute_blas_threshold(value: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_get_distance_compute_blas_threshold() -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_set_distance_compute_blas_query_bs(value: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_get_distance_compute_blas_query_bs() -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_set_distance_compute_blas_database_bs(value: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_get_distance_compute_blas_database_bs() -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn faiss_set_distance_compute_min_k_reservoir(value: ::std::os::raw::c_int);
+}
+extern "C" {
+    pub fn faiss_get_distance_compute_min_k_reservoir() -> ::std::os::raw::c_int;
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

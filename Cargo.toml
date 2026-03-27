@@ -21,5 +21,9 @@ tracing = "0.1"
 ndarray = "0.16"
 ndarray-rand = "0.15"
 
+[[example]]
+name = "gpu_test"
+required-features = ["cuda"]
+
 [workspace]
 members = ["faiss-next-sys"]
