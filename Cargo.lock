@@ -89,8 +89,6 @@ dependencies = [
 [[package]]
 name = "faiss-next-sys"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3480ec84b75044836aa16a1cffb8e55620d176dff3dd08c060ad851dbd97ac4c"
 dependencies = [
  "bindgen",
  "pkg-config",
