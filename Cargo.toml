@@ -28,6 +28,3 @@ ndarray-rand = "0.15"
 [[example]]
 name = "gpu_test"
 required-features = ["cuda"]
-
-[workspace]
-members = ["faiss-next-sys"]
