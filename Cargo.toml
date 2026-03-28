@@ -4,6 +4,10 @@ version = "0.6.0"
 edition = "2021"
 description = "Rust bindings for Faiss (Facebook AI Similarity Search)"
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/yexiangyu/faiss-next"
+homepage = "https://github.com/yexiangyu/faiss-next"
+documentation = "https://docs.rs/faiss-next"
 keywords = ["faiss", "similarity-search", "vector-search", "ann", "machine-learning"]
 categories = ["science", "algorithms", "api-bindings"]
 
