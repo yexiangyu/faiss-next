@@ -109,8 +109,12 @@ faiss-next-sys = "0.6"
 
 | Flag | Description |
 |------|-------------|
-| `cuda` | Enable CUDA support (Linux x86_64 and Windows x86_64) |
+| `cuda` | Enable CUDA support (Linux x86_64 and Windows x86_64 only) |
 | `bindgen` | Generate bindings at compile time |
+
+**Platform restrictions:**
+- `cuda` feature is only available on Linux x86_64 and Windows x86_64
+- Using `cuda` feature on macOS will result in a compile error
 
 **Note:** The `bindgen` feature requires LLVM/Clang to be installed:
 - **Linux:** `sudo apt install llvm-dev libclang-dev` (Ubuntu/Debian)
@@ -149,7 +153,6 @@ src/bindings/
 └── v1_14/
     ├── mod.rs          # Platform selection
     ├── macos_aarch64.rs
-    ├── macos_aarch64_cuda.rs
     ├── linux_x86_64.rs
     ├── linux_x86_64_cuda.rs
     ├── windows_x86_64.rs

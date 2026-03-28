@@ -13,6 +13,9 @@ struct FaissPaths {
 }
 
 fn main() {
+    #[cfg(all(feature = "cuda", target_os = "macos"))]
+    compile_error!("CUDA feature is not supported on macOS. Please remove the 'cuda' feature.");
+
     println!("cargo:rustc-check-cfg=cfg(faiss_binding, values(\"v1_14\", \"v1_15\"))");
     println!(
         "cargo:rustc-check-cfg=cfg(faiss_version, values(\"1_14_0\", \"1_14_1\", \"1_15_0\"))"
@@ -347,12 +350,10 @@ fn generate_bindings(paths: &FaissPaths) {
     std::fs::create_dir_all(&out_dir).unwrap();
 
     let output_file = if cfg!(feature = "cuda") {
-        #[cfg(target_os = "macos")]
-        panic!("CUDA is not supported on macOS");
         match os.as_str() {
             "linux" => out_dir.join(format!("linux_{}_cuda.rs", arch)),
             "windows" => out_dir.join(format!("windows_{}_cuda.rs", arch)),
-            _ => out_dir.join(format!("{}_cuda.rs", os)),
+            _ => panic!("CUDA is only supported on Linux and Windows"),
         }
     } else {
         match os.as_str() {
